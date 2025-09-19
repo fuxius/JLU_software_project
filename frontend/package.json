@@ -8,6 +8,7 @@
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.ts --fix"
   },
+  "packageManager": "pnpm@8.0.0",
   "dependencies": {
     "vue": "^3.3.8",
     "vue-router": "^4.2.5",
