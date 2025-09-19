@@ -103,68 +103,190 @@
 - Node.js 16+
 - npm 或 yarn
 
-## 📦 安装部署
+## 📦 本地环境配置
 
-### 1. 克隆项目
+### 环境要求
+
+- **Python**: 3.9 或更高版本
+- **Node.js**: 16 或更高版本  
+- **PostgreSQL**: 12 或更高版本
+- **uv**: Python包管理器
+- **Git**: 版本控制
+
+### 1. 基础环境安装
+
+#### 安装Python (如果未安装)
+```bash
+# macOS (使用Homebrew)
+brew install python@3.11
+
+# Ubuntu/Debian
+sudo apt update
+sudo apt install python3.11 python3.11-pip
+
+# CentOS/RHEL
+sudo yum install python3.11 python3.11-pip
+
+# Windows
+# 从 https://www.python.org/downloads/ 下载安装
+```
+
+#### 安装Node.js (如果未安装)
+```bash
+# macOS (使用Homebrew)
+brew install node
+
+# Ubuntu/Debian
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# CentOS/RHEL
+curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+sudo yum install -y nodejs
+
+# Windows
+# 从 https://nodejs.org/ 下载安装
+```
+
+#### 安装PostgreSQL (如果未安装)
+```bash
+# macOS (使用Homebrew)
+brew install postgresql
+brew services start postgresql
+
+# Ubuntu/Debian
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+# CentOS/RHEL
+sudo yum install postgresql-server postgresql-contrib
+sudo postgresql-setup initdb
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+# Windows
+# 从 https://www.postgresql.org/download/windows/ 下载安装
+```
+
+#### 安装uv (Python包管理器)
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# 重启终端或执行
+source ~/.bashrc  # Linux
+source ~/.zshrc   # macOS with zsh
+```
+
+### 2. 克隆项目
 ```bash
 git clone <repository-url>
 cd JLU_software_project
 ```
 
-### 2. 后端设置
+### 3. 数据库配置
 
-#### 安装uv（如果尚未安装）
+#### 创建数据库用户和数据库
 ```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# 切换到postgres用户
+sudo -u postgres psql
 
-# Windows
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+# 在PostgreSQL命令行中执行
+CREATE USER tabletennis_user WITH PASSWORD 'your_password';
+CREATE DATABASE tabletennis_db OWNER tabletennis_user;
+GRANT ALL PRIVILEGES ON DATABASE tabletennis_db TO tabletennis_user;
+\q
 ```
 
-#### 创建Python虚拟环境并安装依赖
+#### 测试数据库连接
+```bash
+psql -h localhost -U tabletennis_user -d tabletennis_db
+# 输入密码后如果能连接成功，说明数据库配置正确
+```
+
+### 4. 后端环境配置
+
+#### 创建并配置环境变量
+```bash
+# 复制环境变量模板
+cp env.example .env
+
+# 编辑环境变量文件
+vim .env  # 或使用其他编辑器
+```
+
+**.env 文件配置示例：**
+```bash
+# 数据库配置
+DATABASE_URL=postgresql://tabletennis_user:your_password@localhost:5432/tabletennis_db
+
+# JWT配置  
+SECRET_KEY=your-super-secret-key-here-change-in-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# 应用配置
+DEBUG=true
+
+# 支付配置（可选，后续配置）
+WECHAT_PAY_APP_ID=
+WECHAT_PAY_MCH_ID=
+ALIPAY_APP_ID=
+
+# 许可证服务器配置（可选）
+LICENSE_SERVER_URL=https://license.example.com
+LICENSE_VALIDATION_KEY=
+```
+
+#### 安装Python依赖
 ```bash
 # 创建虚拟环境并安装依赖
 uv sync
 
 # 安装开发依赖
 uv sync --extra dev
+
+# 验证安装
+uv run python --version
 ```
 
-#### 配置环境变量
+#### 初始化数据库
 ```bash
-# 复制环境变量模板
-cp env.example .env
+# 创建数据库迁移文件
+uv run alembic init alembic
 
-# 编辑环境变量文件
-vim .env
-```
+# 创建初始迁移
+uv run alembic revision --autogenerate -m "Initial migration"
 
-#### 数据库设置
-```bash
-# 创建PostgreSQL数据库
-createdb tabletennis_db
-
-# 运行数据库迁移
+# 应用迁移
 uv run alembic upgrade head
 ```
 
 #### 启动后端服务
 ```bash
-# 开发模式（自动重载）
+# 方式1: 使用项目脚本（推荐）
 uv run dev
 
-# 或者直接运行
+# 方式2: 直接运行启动脚本
 uv run python backend/run.py
 
-# 生产模式
-uv run start
+# 方式3: 使用uvicorn命令
+uv run uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-后端API文档访问: http://localhost:8000/docs
+**验证后端启动成功：**
+- 访问 http://localhost:8000 应该看到欢迎信息
+- 访问 http://localhost:8000/docs 查看API文档
+- 访问 http://localhost:8000/health 检查健康状态
 
-### 3. 前端设置
+### 5. 前端环境配置
 
+#### 安装前端依赖
 ```bash
 # 进入前端目录
 cd frontend
@@ -172,14 +294,140 @@ cd frontend
 # 安装依赖
 npm install
 
+# 或使用yarn
+yarn install
+```
+
+#### 启动前端开发服务器
+```bash
 # 启动开发服务器
 npm run dev
 
-# 构建生产版本
-npm run build
+# 或使用yarn
+yarn dev
 ```
 
-前端应用访问: http://localhost:3000
+**验证前端启动成功：**
+- 访问 http://localhost:3000 应该看到登录页面
+
+### 6. 一键启动脚本
+
+为了简化开发流程，可以使用提供的启动脚本：
+
+```bash
+# 给脚本执行权限
+chmod +x scripts/start-dev.sh
+
+# 运行启动脚本
+./scripts/start-dev.sh
+```
+
+这个脚本会自动：
+- 检查环境依赖
+- 安装前后端依赖
+- 执行数据库迁移
+- 同时启动前后端服务
+
+### 7. 开发环境验证
+
+#### 后端验证
+```bash
+# 测试API健康检查
+curl http://localhost:8000/health
+
+# 测试数据库连接
+uv run python -c "
+from backend.app.db.database import engine
+from sqlalchemy import text
+with engine.connect() as conn:
+    result = conn.execute(text('SELECT 1'))
+    print('数据库连接成功:', result.fetchone())
+"
+```
+
+#### 前端验证
+- 打开浏览器访问 http://localhost:3000
+- 检查浏览器控制台是否有错误
+- 尝试注册一个测试用户
+
+### 8. 常见问题解决
+
+#### PostgreSQL连接问题
+```bash
+# 检查PostgreSQL服务状态
+sudo systemctl status postgresql  # Linux
+brew services list | grep postgresql  # macOS
+
+# 重启PostgreSQL
+sudo systemctl restart postgresql  # Linux
+brew services restart postgresql  # macOS
+
+# 检查端口是否被占用
+netstat -an | grep 5432
+```
+
+#### Python依赖问题
+```bash
+# 清理并重新安装依赖
+uv sync --reinstall
+
+# 检查Python版本
+python --version
+uv run python --version
+
+# 检查虚拟环境
+uv venv list
+```
+
+#### Node.js依赖问题
+```bash
+# 清理node_modules
+cd frontend
+rm -rf node_modules package-lock.json
+npm install
+
+# 或使用yarn
+rm -rf node_modules yarn.lock
+yarn install
+```
+
+#### 端口冲突问题
+```bash
+# 检查端口占用
+lsof -i :8000  # 后端端口
+lsof -i :3000  # 前端端口
+
+# 杀死占用端口的进程
+kill -9 <PID>
+```
+
+### 9. 开发工具推荐
+
+#### VS Code插件
+- Python
+- Pylance
+- Vetur (Vue 3 支持)
+- TypeScript Vue Plugin
+- PostgreSQL
+- Thunder Client (API测试)
+
+#### 数据库管理工具
+- pgAdmin (Web界面)
+- DBeaver (桌面应用)
+- TablePlus (macOS)
+
+### 10. 下一步
+
+环境配置完成后，你可以：
+1. 创建超级管理员账户
+2. 添加测试校区和用户
+3. 开始功能开发和测试
+4. 查看API文档了解接口使用方法
+
+**重要提示：**
+- 确保.env文件不要提交到版本控制系统
+- 生产环境使用时请修改默认密码和密钥
+- 定期备份数据库数据
 
 ## 🗄️ 数据库设计
 
@@ -306,33 +554,6 @@ npm run test:e2e
 - `SECRET_KEY` - JWT密钥
 - `LICENSE_SERVER_URL` - 许可证验证服务器
 - 支付相关配置
-
-## 🤝 贡献指南
-
-1. Fork 项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 详情请查看 [LICENSE](LICENSE) 文件
-
-## 📞 支持与联系
-
-如有问题或建议，请通过以下方式联系：
-- 项目Issues: [GitHub Issues]
-- 邮箱: admin@example.com
-
-## 🎯 路线图
-
-- [ ] 移动端适配
-- [ ] 微信小程序版本
-- [ ] 数据统计分析
-- [ ] 智能排课算法
-- [ ] 视频教学功能
-- [ ] 多语言支持
 
 ---
 
