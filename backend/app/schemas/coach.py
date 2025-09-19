@@ -1,43 +1,79 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from decimal import Decimal
-from ..models.coach import CoachLevel
+from enum import Enum
+
+from .user import UserResponse
+
+class CoachLevelEnum(str, Enum):
+    """教练级别枚举"""
+    SENIOR = "senior"
+    INTERMEDIATE = "intermediate" 
+    JUNIOR = "junior"
 
 class CoachBase(BaseModel):
-    """教练基础Schema"""
-    level: CoachLevel
+    """教练基础信息"""
+    level: CoachLevelEnum
+    hourly_rate: float
+    bio: Optional[str] = None
     achievements: Optional[str] = None
-    max_students: Optional[int] = 20
 
 class CoachCreate(CoachBase):
-    """教练创建Schema"""
-    user_id: int
+    """创建教练"""
+    pass
 
 class CoachUpdate(BaseModel):
-    """教练更新Schema"""
-    level: Optional[CoachLevel] = None
+    """更新教练信息"""
+    level: Optional[CoachLevelEnum] = None
+    hourly_rate: Optional[float] = None
+    bio: Optional[str] = None
     achievements: Optional[str] = None
-    max_students: Optional[int] = None
-    approval_status: Optional[str] = None
+    is_approved: Optional[bool] = None
 
 class CoachResponse(CoachBase):
-    """教练响应Schema"""
+    """教练响应"""
     id: int
     user_id: int
-    hourly_rate: Decimal
-    current_students: int
-    approval_status: str
-    approved_by: Optional[int] = None
-    approved_at: Optional[datetime] = None
-    created_at: datetime
-    updated_at: Optional[datetime] = None
+    is_approved: bool
+    student_count: Optional[int] = 0
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+    
+    # 关联的用户信息
+    user: UserResponse
     
     class Config:
         from_attributes = True
+        
+    @classmethod
+    def from_orm(cls, obj):
+        """从ORM对象创建响应对象"""
+        # 计算学员数量
+        student_count = 0
+        if hasattr(obj, 'coach_students'):
+            student_count = len([cs for cs in obj.coach_students if cs.status == 'active'])
+        
+        data = {
+            'id': obj.id,
+            'user_id': obj.user_id,
+            'level': obj.level,
+            'hourly_rate': obj.hourly_rate,
+            'bio': obj.bio,
+            'achievements': obj.achievements,
+            'is_approved': obj.is_approved,
+            'student_count': student_count,
+            'created_at': obj.created_at,
+            'updated_at': obj.updated_at,
+            'user': UserResponse.from_orm(obj.user) if obj.user else None
+        }
+        
+        return cls(**data)
 
-class CoachApproval(BaseModel):
-    """教练审核Schema"""
-    approval_status: str  # approved/rejected
-    level: CoachLevel
-    response_message: Optional[str] = None
+class CoachSearchRequest(BaseModel):
+    """教练搜索请求"""
+    name: Optional[str] = None
+    gender: Optional[str] = None
+    age_min: Optional[int] = None
+    age_max: Optional[int] = None
+    level: Optional[CoachLevelEnum] = None
+    campus_id: Optional[int] = None

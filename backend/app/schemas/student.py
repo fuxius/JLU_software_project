@@ -1,35 +1,56 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from decimal import Decimal
+
+from .user import UserResponse
 
 class StudentBase(BaseModel):
-    """学员基础Schema"""
-    max_coaches: Optional[int] = 2
+    """学员基础信息"""
+    emergency_contact: Optional[str] = None
+    emergency_phone: Optional[str] = None
 
 class StudentCreate(StudentBase):
-    """学员创建Schema"""
-    user_id: int
+    """创建学员"""
+    pass
 
 class StudentUpdate(BaseModel):
-    """学员更新Schema"""
-    max_coaches: Optional[int] = None
+    """更新学员信息"""
+    emergency_contact: Optional[str] = None
+    emergency_phone: Optional[str] = None
 
 class StudentResponse(StudentBase):
-    """学员响应Schema"""
+    """学员响应"""
     id: int
     user_id: int
-    account_balance: Decimal
-    current_coaches: int
-    monthly_cancellations: int
-    last_cancellation_reset: Optional[datetime] = None
-    created_at: datetime
-    updated_at: Optional[datetime] = None
+    balance: float
+    coach_count: Optional[int] = 0
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+    
+    # 关联的用户信息
+    user: UserResponse
     
     class Config:
         from_attributes = True
-
-class StudentBalanceUpdate(BaseModel):
-    """学员余额更新Schema"""
-    amount: Decimal
-    operation: str  # add/subtract
+        
+    @classmethod
+    def from_orm(cls, obj):
+        """从ORM对象创建响应对象"""
+        # 计算教练数量
+        coach_count = 0
+        if hasattr(obj, 'coach_students'):
+            coach_count = len([cs for cs in obj.coach_students if cs.status == 'active'])
+        
+        data = {
+            'id': obj.id,
+            'user_id': obj.user_id,
+            'balance': obj.balance,
+            'emergency_contact': obj.emergency_contact,
+            'emergency_phone': obj.emergency_phone,
+            'coach_count': coach_count,
+            'created_at': obj.created_at,
+            'updated_at': obj.updated_at,
+            'user': UserResponse.from_orm(obj.user) if obj.user else None
+        }
+        
+        return cls(**data)

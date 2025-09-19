@@ -136,9 +136,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox, FormInstance } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import { campusApi } from '@/api/campus'
 
 const campusFormRef = ref<FormInstance>()
 const loading = ref(false)
@@ -193,35 +194,19 @@ const dialogTitle = computed(() => isEditMode.value ? '编辑校区' : '新增�
 const loadCampusList = async () => {
   loading.value = true
   try {
-    // TODO: 调用获取校区列表API
-    console.log('加载校区列表', { 
-      page: pagination.page, 
-      size: pagination.size,
-      ...searchForm 
+    const response = await campusApi.getCampuses({
+      skip: (pagination.page - 1) * pagination.size,
+      limit: pagination.size
     })
     
-    // 模拟数据
-    campusList.value = [
-      {
-        id: 1,
-        name: '总校区',
-        address: '北京市朝阳区xxx路123号',
-        contact_person: '张主任',
-        phone: '13800138001',
-        email: 'main@example.com',
-        is_main: true
-      },
-      {
-        id: 2,
-        name: '海淀分校',
-        address: '北京市海淀区xxx路456号',
-        contact_person: '李老师',
-        phone: '13800138002',
-        email: 'haidian@example.com',
-        is_main: false
+    campusList.value = response.data.filter((campus: any) => {
+      if (searchForm.name) {
+        return campus.name.includes(searchForm.name)
       }
-    ]
-    pagination.total = 2
+      return true
+    })
+    
+    pagination.total = campusList.value.length
   } catch (error) {
     console.error('加载校区列表失败:', error)
     ElMessage.error('加载校区列表失败')
@@ -273,10 +258,14 @@ const handleSave = async () => {
     await campusFormRef.value.validate()
     saving.value = true
     
-    // TODO: 调用保存校区API
-    console.log('保存校区:', campusForm)
+    if (isEditMode.value) {
+      await campusApi.updateCampus(campusForm.id, campusForm)
+      ElMessage.success('编辑成功')
+    } else {
+      await campusApi.createCampus(campusForm)
+      ElMessage.success('新增成功')
+    }
     
-    ElMessage.success(isEditMode.value ? '编辑成功' : '新增成功')
     dialogVisible.value = false
     loadCampusList()
   } catch (error) {
@@ -295,13 +284,13 @@ const handleDelete = async (row: any) => {
       type: 'warning'
     })
     
-    // TODO: 调用删除校区API
-    console.log('删除校区:', row.id)
-    
+    await campusApi.deleteCampus(row.id)
     ElMessage.success('删除成功')
     loadCampusList()
-  } catch (error) {
-    // 用户取消操作
+  } catch (error: any) {
+    if (error.response) {
+      ElMessage.error(error.response.data.detail || '删除失败')
+    }
   }
 }
 

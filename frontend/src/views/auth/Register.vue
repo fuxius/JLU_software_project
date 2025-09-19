@@ -75,6 +75,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, FormInstance } from 'element-plus'
+import { authApi } from '@/api/auth'
 
 const router = useRouter()
 const registerFormRef = ref<FormInstance>()
@@ -140,14 +141,25 @@ const handleRegister = async () => {
     await registerFormRef.value.validate()
     loading.value = true
     
-    // TODO: 调用注册API
-    console.log('注册信息:', registerForm)
+    const registerData = {
+      username: registerForm.username,
+      password: registerForm.password,
+      real_name: registerForm.realName,
+      phone: registerForm.phone,
+      email: registerForm.email || null,
+      gender: registerForm.gender,
+      age: registerForm.age
+    }
     
-    ElMessage.success('注册成功！')
+    // 默认注册为学员
+    await authApi.registerStudent(registerData)
+    
+    ElMessage.success('注册成功！请登录')
     router.push('/login')
-  } catch (error) {
+  } catch (error: any) {
     console.error('注册失败:', error)
-    ElMessage.error('注册失败，请检查输入信息')
+    const message = error.response?.data?.detail || '注册失败，请检查输入信息'
+    ElMessage.error(message)
   } finally {
     loading.value = false
   }
