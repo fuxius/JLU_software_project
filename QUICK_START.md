@@ -47,9 +47,13 @@ cd ..
 ### 5. 初始化数据库
 
 ```bash
-# 初始化SQLite数据库
+# 初始化Alembic（数据库迁移工具）
 uv run alembic init alembic
+
+# 创建初始迁移文件
 uv run alembic revision --autogenerate -m "Initial migration"
+
+# 应用迁移，创建数据库表
 uv run alembic upgrade head
 ```
 
@@ -57,7 +61,7 @@ uv run alembic upgrade head
 
 ```bash
 # 启动后端 (终端1)
-uv run dev
+uv run uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 
 # 启动前端 (终端2)
 cd frontend && pnpm dev
@@ -91,8 +95,8 @@ print('管理员设置完成')
 
 ```bash
 # 后端
-uv run dev                           # 启动开发服务器
-uv run alembic upgrade head          # 应用数据库迁移
+uv run uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000  # 启动开发服务器
+uv run alembic upgrade head                                               # 应用数据库迁移
 
 # 前端  
 cd frontend && pnpm dev              # 启动开发服务器

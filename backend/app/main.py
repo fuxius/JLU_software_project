@@ -6,8 +6,7 @@ import os
 
 from .api.v1 import api_router
 from .core.config import settings
-from .db.database import engine
-from .models import Base
+from .db.database import engine, Base
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)

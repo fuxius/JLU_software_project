@@ -19,11 +19,15 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.main import app
 
-if __name__ == "__main__":
+def main():
+    """主函数，用于uv脚本调用"""
     uvicorn.run(
-        "app.main:app",
+        "backend.app.main:app",
         host="0.0.0.0",
         port=8000,
         reload=True,
         log_level="info"
     )
+
+if __name__ == "__main__":
+    main()

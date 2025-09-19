@@ -1,9 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, Enum, Text
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 import enum
-
-Base = declarative_base()
+from ..db.database import Base
 
 class UserRole(enum.Enum):
     """用户角色枚举"""

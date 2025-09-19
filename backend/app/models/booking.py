@@ -37,9 +37,9 @@ class Booking(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), comment="创建时间")
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), comment="更新时间")
     
-    # 关系
+    # 关系 - 使用字符串引用避免循环导入
     coach = relationship("Coach", foreign_keys=[coach_id])
-    student = relationship("Student", foreign_keys=[student_id])
+    student = relationship("Student", foreign_keys=[student_id])  
     campus = relationship("Campus", foreign_keys=[campus_id])
     canceller = relationship("User", foreign_keys=[cancelled_by])
     cancel_confirmer = relationship("User", foreign_keys=[cancel_confirmed_by])

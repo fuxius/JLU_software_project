@@ -39,6 +39,9 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["backend"]
+
 [tool.black]
 line-length = 88
 target-version = ['py39']
@@ -71,5 +74,5 @@ disallow_untyped_defs = true
 ignore_missing_imports = true
 
 [project.scripts]
-dev = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
-start = "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+dev = "backend.run:main"
+
