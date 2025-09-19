@@ -13,9 +13,16 @@ class PaymentMethod(enum.Enum):
 class PaymentStatus(enum.Enum):
     """支付状态枚举"""
     PENDING = "pending"  # 待支付
-    COMPLETED = "completed"  # 支付完成
+    SUCCESS = "success"  # 支付成功
     FAILED = "failed"  # 支付失败
-    REFUNDED = "refunded"  # 已退款
+    CANCELLED = "cancelled"  # 已取消
+
+class PaymentType(enum.Enum):
+    """支付类型枚举"""
+    RECHARGE = "recharge"  # 充值
+    BOOKING = "booking"  # 课程费用
+    COMPETITION = "competition"  # 比赛报名费
+    REFUND = "refund"  # 退款
 
 class Payment(Base):
     """支付记录表"""
@@ -25,9 +32,11 @@ class Payment(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="用户ID")
     amount = Column(Numeric(10, 2), nullable=False, comment="金额")
     payment_method = Column(String(20), nullable=False, comment="支付方式")
-    payment_status = Column(String(20), default="pending", comment="支付状态")
+    status = Column(String(20), default="pending", comment="支付状态")
     transaction_id = Column(String(100), comment="交易ID")
-    payment_type = Column(String(20), nullable=False, comment="支付类型: recharge/course/competition/license")
+    type = Column(String(20), nullable=False, comment="支付类型: recharge/course/competition/license")
+    description = Column(Text, comment="支付描述")
+    paid_at = Column(DateTime(timezone=True), comment="支付完成时间")
     related_id = Column(Integer, comment="关联ID(课程ID/比赛ID等)")
     qr_code_url = Column(String(255), comment="支付二维码URL")
     payment_time = Column(DateTime(timezone=True), comment="支付时间")
@@ -43,4 +52,4 @@ class Payment(Base):
     creator = relationship("User", foreign_keys=[created_by])
     
     def __repr__(self):
-        return f"<Payment(id={self.id}, user={self.user_id}, amount={self.amount}, status='{self.payment_status}')>"
+        return f"<Payment(id={self.id}, user={self.user_id}, amount={self.amount}, status='{self.status}')>"
