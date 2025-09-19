@@ -8,8 +8,11 @@
 
 - [ ] Python 3.9+ (`python --version`)
 - [ ] Node.js 16+ (`node --version`)  
-- [ ] PostgreSQL 12+ (`psql --version`)
 - [ ] Git (`git --version`)
+
+**数据库选择：**
+- ✅ **SQLite** (推荐): 零配置，自动创建
+- ⚪ PostgreSQL 12+ (可选): 需要额外安装配置
 
 如果缺少任何组件，请参考 [README.md](./README.md) 的详细安装指南。
 
