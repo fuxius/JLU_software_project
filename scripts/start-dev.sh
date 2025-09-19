@@ -16,10 +16,18 @@ if ! command -v node &> /dev/null; then
     exit 1
 fi
 
-# 检查PostgreSQL是否运行
-if ! pg_isready &> /dev/null; then
-    echo "❌ PostgreSQL未运行，请先启动PostgreSQL服务"
-    exit 1
+# 检查数据库配置
+if [[ "$DATABASE_URL" == *"postgresql"* ]]; then
+    echo "🗄️  检查PostgreSQL连接..."
+    if ! pg_isready &> /dev/null; then
+        echo "❌ PostgreSQL未运行，请先启动PostgreSQL服务"
+        exit 1
+    fi
+    echo "✅ PostgreSQL连接正常"
+elif [[ "$DATABASE_URL" == *"sqlite"* ]]; then
+    echo "🗄️  使用SQLite数据库，无需额外配置"
+else
+    echo "⚠️  数据库配置未明确指定，使用默认SQLite"
 fi
 
 # 创建.env文件（如果不存在）

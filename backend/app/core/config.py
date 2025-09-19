@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     """应用配置"""
     
     # 数据库配置
-    DATABASE_URL: str = config("DATABASE_URL", default="postgresql://postgres:password@localhost:5432/tabletennis_db")
+    DATABASE_URL: str = config("DATABASE_URL", default="sqlite:///./tabletennis.db")
     
     # JWT配置
     SECRET_KEY: str = config("SECRET_KEY", default="your-secret-key-here")
