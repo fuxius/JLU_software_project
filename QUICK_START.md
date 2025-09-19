@@ -69,13 +69,13 @@ cd frontend && pnpm dev
 
 ## 访问应用
 
-- **前端**: http://localhost:3000
-- **后端API文档**: http://localhost:8000/docs
-- **健康检查**: http://localhost:8000/health
+- **前端**: http://localhost:3001 (如果3000端口被占用)
+- **后端API文档**: http://localhost:8001/docs（默认是8000）
+- **健康检查**: http://localhost:8001/health
 
 ## 创建管理员
 
-1. 访问 http://localhost:3000/register 注册用户
+1. 访问 http://localhost:3001/register 注册用户
 2. 修改用户角色为管理员：
 
 ```bash

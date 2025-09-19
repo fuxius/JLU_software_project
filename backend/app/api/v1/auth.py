@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 
 from ...db.database import get_db
-from ...schemas.user import UserLogin, Token, UserCreate, UserResponse
+from ...schemas.user import UserLogin, Token, UserCreate, UserRegister, UserResponse
 from ...services.user_service import UserService
 from ...core.security import create_access_token
 from ...core.config import settings
@@ -40,24 +40,34 @@ def login(
 
 @router.post("/register/student", response_model=UserResponse, summary="学员注册")
 def register_student(
-    user_data: UserCreate,
+    user_data: UserRegister,
     db: Session = Depends(get_db)
 ):
     """学员注册"""
     from ...models.user import UserRole
-    user_data.role = UserRole.STUDENT
     
-    user = UserService.create_user(db, user_data)
+    # 转换为UserCreate并设置角色
+    create_data = UserCreate(
+        **user_data.dict(),
+        role=UserRole.STUDENT
+    )
+    
+    user = UserService.create_user(db, create_data)
     return UserResponse.from_orm(user)
 
 @router.post("/register/coach", response_model=UserResponse, summary="教练注册")
 def register_coach(
-    user_data: UserCreate,
+    user_data: UserRegister,
     db: Session = Depends(get_db)
 ):
     """教练注册申请"""
     from ...models.user import UserRole
-    user_data.role = UserRole.COACH
     
-    user = UserService.create_user(db, user_data)
+    # 转换为UserCreate并设置角色
+    create_data = UserCreate(
+        **user_data.dict(),
+        role=UserRole.COACH
+    )
+    
+    user = UserService.create_user(db, create_data)
     return UserResponse.from_orm(user)

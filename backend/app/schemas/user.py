@@ -15,6 +15,24 @@ class UserBase(BaseModel):
     avatar_url: Optional[str] = None
     id_number: Optional[str] = None
 
+class UserRegister(UserBase):
+    """用户注册Schema（不包含role）"""
+    password: str
+    
+    @validator('password')
+    def validate_password(cls, v):
+        if len(v) < 8 or len(v) > 16:
+            raise ValueError('密码长度必须在8-16位之间')
+        
+        has_letter = any(c.isalpha() for c in v)
+        has_digit = any(c.isdigit() for c in v)
+        has_special = any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in v)
+        
+        if not (has_letter and has_digit and has_special):
+            raise ValueError('密码必须包含字母、数字和特殊字符')
+        
+        return v
+
 class UserCreate(UserBase):
     """用户创建Schema"""
     password: str
