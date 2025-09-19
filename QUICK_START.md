@@ -38,62 +38,33 @@ git clone <your-repository-url>
 cd JLU_software_project
 ```
 
-### 3. 配置数据库 (2分钟)
+### 3. 一键环境初始化 (3分钟)
+
+**方式一：SQLite版本（推荐，零配置）**
+
+```bash
+# 运行SQLite初始化脚本
+./scripts/init-sqlite.sh
+```
+
+这个脚本会自动：
+- 安装uv包管理器
+- 创建SQLite配置文件
+- 安装所有依赖
+- 初始化数据库
+
+**方式二：PostgreSQL版本（如需要）**
 
 ```bash
 # 启动PostgreSQL服务
 sudo systemctl start postgresql  # Linux
 brew services start postgresql   # macOS
 
-# 创建数据库和用户
-sudo -u postgres psql -c "CREATE USER tabletennis_user WITH PASSWORD 'dev123456';"
-sudo -u postgres psql -c "CREATE DATABASE tabletennis_db OWNER tabletennis_user;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE tabletennis_db TO tabletennis_user;"
+# 运行PostgreSQL初始化脚本
+./scripts/init-dev.sh
 ```
 
-### 4. 配置环境变量 (1分钟)
-
-```bash
-# 复制环境配置模板
-cp env.example .env
-
-# 快速配置（开发环境）
-cat > .env << EOF
-DATABASE_URL=postgresql://tabletennis_user:dev123456@localhost:5432/tabletennis_db
-SECRET_KEY=dev-secret-key-change-in-production
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-DEBUG=true
-EOF
-```
-
-### 5. 安装后端依赖 (2分钟)
-
-```bash
-# 创建虚拟环境并安装所有依赖
-uv sync --extra dev
-```
-
-### 6. 初始化数据库 (1分钟)
-
-```bash
-# 初始化Alembic
-uv run alembic init alembic
-
-# 创建并应用初始迁移
-uv run alembic revision --autogenerate -m "Initial migration"
-uv run alembic upgrade head
-```
-
-### 7. 安装前端依赖 (2分钟)
-
-```bash
-cd frontend
-npm install
-cd ..
-```
-
-### 8. 启动服务 (30秒)
+### 4. 启动服务 (30秒)
 
 ```bash
 # 使用一键启动脚本

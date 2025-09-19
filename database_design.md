@@ -2,7 +2,11 @@
 
 ## 数据库概述
 
-乒乓球培训管理系统采用PostgreSQL作为主数据库，使用SQLAlchemy ORM进行数据访问。数据库设计遵循第三范式，确保数据一致性和完整性。
+乒乓球培训管理系统支持两种数据库：
+- **SQLite** (默认): 轻量级，零配置，适合开发和小规模部署
+- **PostgreSQL**: 功能强大，适合生产环境和大规模部署
+
+系统使用SQLAlchemy ORM进行数据访问，确保数据库无关性。数据库设计遵循第三范式，确保数据一致性和完整性。
 
 ## 数据表结构
 
@@ -436,13 +440,30 @@ CREATE TRIGGER check_balance BEFORE UPDATE ON students
 
 ## 数据库连接配置
 
-### 连接池配置
+### SQLite配置 (默认)
 
 ```python
-# database.py
+# database.py - SQLite配置
+from sqlalchemy import create_engine
+
+# SQLite配置
+DATABASE_URL = "sqlite:///./tabletennis.db"
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False},  # SQLite特有配置
+    echo=False  # 开发时可设为True查看SQL
+)
+```
+
+### PostgreSQL配置 (生产环境)
+
+```python
+# database.py - PostgreSQL配置
 from sqlalchemy import create_engine
 from sqlalchemy.pool import QueuePool
 
+# PostgreSQL配置
+DATABASE_URL = "postgresql://user:pass@localhost:5432/tabletennis_db"
 engine = create_engine(
     DATABASE_URL,
     poolclass=QueuePool,
@@ -453,15 +474,16 @@ engine = create_engine(
 )
 ```
 
-### 读写分离（可选）
+### 数据库切换
 
-如果需要支持读写分离，可以配置主从数据库：
+通过环境变量轻松切换数据库：
 
-```python
-# 主数据库（写）
-WRITE_DB_URL = "postgresql://user:pass@master-db:5432/tabletennis_db"
-# 从数据库（读）
-READ_DB_URL = "postgresql://user:pass@slave-db:5432/tabletennis_db"
+```bash
+# 使用SQLite
+DATABASE_URL=sqlite:///./tabletennis.db
+
+# 使用PostgreSQL  
+DATABASE_URL=postgresql://user:pass@localhost:5432/tabletennis_db
 ```
 
 ## 数据迁移
