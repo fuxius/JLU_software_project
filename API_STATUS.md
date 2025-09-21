@@ -149,27 +149,57 @@
 - `GET /evaluations/course/{course_id}` - 获取课程评价
 - `GET /evaluations/pending` - 获取待评价课程
 
-#### 4. 比赛管理系统 (competitions.py) ❌ 未实现
+#### 4. 比赛管理系统 (competitions.py) ✅ 已完成
 **优先级：🟡 中**
-- `POST /competitions/` - 创建比赛
-- `GET /competitions/` - 获取比赛列表
-- `GET /competitions/{competition_id}` - 获取比赛详情
-- `POST /competitions/{competition_id}/register` - 报名比赛
-- `GET /competitions/{competition_id}/registrations` - 获取报名列表
-- `POST /competitions/{competition_id}/draw` - 生成比赛对阵
-- `POST /competitions/{competition_id}/results` - 录入比赛结果
+- `POST /competitions/` - 创建比赛 ✅
+- `GET /competitions/` - 获取比赛列表 ✅
+- `GET /competitions/{competition_id}` - 获取比赛详情 ✅
+- `PUT /competitions/{competition_id}` - 更新比赛信息 ✅
+- `POST /competitions/{competition_id}/register` - 报名比赛 ✅
+- `GET /competitions/{competition_id}/registrations` - 获取报名列表 ✅
+- `POST /competitions/{competition_id}/draw` - 生成比赛对阵 ✅
+- `PUT /competitions/matches/{match_id}` - 录入比赛结果 ✅
+- `GET /competitions/{competition_id}/matches` - 获取比赛对阵 ✅
+- `POST /competitions/registrations/{registration_id}/confirm` - 确认报名 ✅
+- `GET /competitions/statistics/summary` - 获取比赛统计 ✅
 
-#### 5. 系统日志 (system_logs.py) ❌ 未实现
+#### 5. 系统日志 (system_logs.py) ✅ 已完成
 **优先级：🟢 低**
-- `GET /system-logs/` - 获取系统日志
-- `GET /system-logs/{log_id}` - 获取日志详情
-- `POST /system-logs/export` - 导出日志
+- `GET /system-logs/` - 获取系统日志 ✅
+- `GET /system-logs/{log_id}` - 获取日志详情 ✅
+- `GET /system-logs/export/csv` - 导出日志为CSV ✅
+- `GET /system-logs/statistics/summary` - 获取日志统计 ✅
+- `DELETE /system-logs/cleanup` - 清理旧日志 ✅
 
-#### 6. 软件授权系统 (licenses.py) ❌ 未实现
+#### 6. 软件授权系统 (licenses.py) ✅ 已完成
 **优先级：🟢 低**
-- `POST /licenses/validate` - 验证许可证
-- `POST /licenses/renew` - 续费许可证
-- `GET /licenses/status` - 获取许可证状态
+- `POST /licenses/` - 创建软件授权 ✅
+- `GET /licenses/` - 获取授权列表 ✅
+- `GET /licenses/{license_id}` - 获取授权详情 ✅
+- `PUT /licenses/{license_id}` - 更新授权信息 ✅
+- `POST /licenses/validate` - 验证授权 ✅
+- `POST /licenses/{license_id}/renew` - 续费授权 ✅
+- `POST /licenses/heartbeat` - 授权心跳检测 ✅
+- `DELETE /licenses/{license_id}/activations` - 停用授权激活 ✅
+- `GET /licenses/statistics/summary` - 获取授权统计 ✅
+- `GET /licenses/key/{license_key}` - 根据密钥获取授权 ✅
+
+#### 7. 系统消息通知 (notifications.py) ✅ 已完成
+**优先级：🟡 中**
+- `POST /notifications/` - 创建通知 ✅
+- `POST /notifications/bulk` - 批量发送通知 ✅
+- `GET /notifications/` - 获取通知列表 ✅
+- `GET /notifications/{notification_id}` - 获取通知详情 ✅
+- `PUT /notifications/{notification_id}` - 更新通知状态 ✅
+- `POST /notifications/{notification_id}/read` - 标记为已读 ✅
+- `POST /notifications/mark-all-read` - 标记所有为已读 ✅
+- `DELETE /notifications/{notification_id}` - 删除通知 ✅
+- `GET /notifications/unread/count` - 获取未读数量 ✅
+- `GET /notifications/statistics/summary` - 获取通知统计 ✅
+- `GET /notifications/settings/me` - 获取我的通知设置 ✅
+- `PUT /notifications/settings/me` - 更新我的通知设置 ✅
+- `GET /notifications/templates` - 获取通知模板列表 ✅
+- `POST /notifications/templates/{template_code}/send` - 使用模板发送通知 ✅
 
 ### 前端 API 已完成模块
 
@@ -226,6 +256,30 @@ export const competitionApi = {
 - ✅ 关系状态管理和显示
 - ✅ 权限检查和限制规则
 
+#### 4. 课后评价 API (evaluations.ts) ✅ 已完成
+**优先级：🟡 中**
+- ✅ 完整的评价类型定义
+- ✅ 创建和更新评价功能
+- ✅ 评价列表查询和筛选
+- ✅ 课程评价统计显示
+- ✅ 待评价课程提醒
+
+#### 5. 比赛管理 API (competitions.ts) ✅ 已完成
+**优先级：🟡 中**
+- ✅ 比赛创建和管理
+- ✅ 比赛报名和确认
+- ✅ 对阵生成和结果录入
+- ✅ 比赛统计和数据展示
+- ✅ 完整的比赛流程支持
+
+#### 6. 系统通知 API (notifications.ts) ✅ 已完成
+**优先级：🟡 中**
+- ✅ 通知创建和批量发送
+- ✅ 通知列表和状态管理
+- ✅ 用户通知设置配置
+- ✅ 模板通知系统
+- ✅ 实时通知统计
+
 ### 业务服务已完成模块
 
 #### 1. 预约服务 (booking_service.py) ✅ 已完成
@@ -246,17 +300,48 @@ export const competitionApi = {
 - ✅ 支付记录统计
 - ⚠️ 第三方支付集成（待对接真实支付平台）
 
-#### 3. 评价服务 (evaluation_service.py) ❌ 未实现
+#### 3. 评价服务 (evaluation_service.py) ✅ 已完成
 **优先级：🟡 中**
-- 评价创建逻辑
-- 评价统计分析
+- ✅ 评价创建逻辑
+- ✅ 评价权限验证
+- ✅ 评价统计分析
+- ✅ 待评价课程查询
+- ✅ 评价汇总功能
 
-#### 4. 比赛服务 (competition_service.py) ❌ 未实现
+#### 4. 比赛服务 (competition_service.py) ✅ 已完成
 **优先级：🟡 中**
-- 比赛创建和管理
-- 报名逻辑
-- 对阵生成算法
-- 结果统计
+- ✅ 比赛创建和管理
+- ✅ 报名逻辑和权限验证
+- ✅ 对阵生成算法
+- ✅ 比赛结果统计
+- ✅ 支付集成和费用管理
+- ✅ 权限和状态控制
+
+#### 5. 系统日志服务 (system_log_service.py) ✅ 已完成
+**优先级：🟢 低**
+- ✅ 日志记录功能
+- ✅ 日志查询和筛选
+- ✅ 日志统计分析
+- ✅ 日志导出CSV
+- ✅ 旧日志清理
+
+#### 6. 通知服务 (notification_service.py) ✅ 已完成
+**优先级：🟡 中**
+- ✅ 通知创建和发送
+- ✅ 批量通知处理
+- ✅ 用户通知设置管理
+- ✅ 模板通知系统
+- ✅ 通知权限和筛选
+- ✅ 统计和分析功能
+
+#### 7. 授权服务 (license_service.py) ✅ 已完成
+**优先级：🟢 低**
+- ✅ 软件授权创建和管理
+- ✅ 授权验证和激活
+- ✅ 心跳检测和使用统计
+- ✅ 授权续费和状态控制
+- ✅ 硬件指纹和安全验证
+- ✅ 授权统计和报表
 
 ## 🎯 实现优先级建议
 
@@ -265,13 +350,14 @@ export const competitionApi = {
 2. **支付计费系统** ✅ (payments.py + payments.ts + payment_service.py)
 3. **教练学员关系** ✅ (coach_students.py + coach-students.ts + coach_student_service.py)
 
-### 第二阶段：增强功能 (1-2周)
-1. **课后评价系统** (evaluations.py + evaluations.ts + evaluation_service.py)
-2. **系统日志管理** (system_logs.py)
+### 第二阶段：增强功能 ✅ 已完成
+1. **课后评价系统** ✅ (evaluations.py + evaluations.ts + evaluation_service.py)
+2. **系统日志管理** ✅ (system_logs.py + system_log_service.py)
 
-### 第三阶段：高级功能 (2-3周)
-1. **比赛管理系统** (competitions.py + competitions.ts + competition_service.py)
-2. **软件授权系统** (licenses.py)
+### 第三阶段：高级功能 ✅ 已完成
+1. **比赛管理系统** ✅ (competitions.py + competitions.ts + competition_service.py)
+2. **系统消息通知** ✅ (notifications.py + notifications.ts + notification_service.py)
+3. **软件授权系统** ✅ (licenses.py + license_service.py)
 
 ## 📋 具体实现任务清单
 
@@ -314,12 +400,13 @@ export const competitionApi = {
 | 双选关系 | ✅ | ✅ | ✅ | ✅ | ✅ | 100% |
 | 课程预约 | ✅ | ✅ | ✅ | ✅ | ✅ | 100% |
 | 支付计费 | ✅ | ✅ | ✅ | ✅ | ✅ | 100% |
-| 课后评价 | ✅ | ❌ | ❌ | ❌ | ❌ | 20% |
-| 比赛管理 | ✅ | ❌ | ❌ | ❌ | ❌ | 20% |
-| 系统日志 | ✅ | ❌ | ❌ | ✅ | ❌ | 40% |
-| 软件授权 | ✅ | ❌ | ❌ | ❌ | ❌ | 20% |
+| 课后评价 | ✅ | ✅ | ✅ | ✅ | ✅ | 100% |
+| 比赛管理 | ✅ | ✅ | ✅ | ✅ | ❌ | 80% |
+| 系统日志 | ✅ | ✅ | ❌ | ✅ | ❌ | 60% |
+| 系统通知 | ✅ | ✅ | ✅ | ✅ | ❌ | 80% |
+| 软件授权 | ✅ | ✅ | ❌ | ✅ | ❌ | 60% |
 
-**总体完成度：约 80%**
+**总体完成度：约 95%**
 
 ---
 

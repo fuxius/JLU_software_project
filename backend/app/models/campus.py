@@ -21,6 +21,8 @@ class Campus(Base):
     
     # 关系
     admin = relationship("User", foreign_keys=[admin_id])
+    competitions = relationship("Competition", back_populates="campus")
+    licenses = relationship("License", back_populates="campus")
     
     def __repr__(self):
         return f"<Campus(id={self.id}, name='{self.name}', is_main={self.is_main_campus})>"

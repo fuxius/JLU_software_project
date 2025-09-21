@@ -8,6 +8,10 @@ from .coach_students import router as coach_students_router
 from .bookings import router as bookings_router
 from .payments import router as payments_router
 from .evaluations import router as evaluations_router
+from .system_logs import router as system_logs_router
+from .competitions import router as competitions_router
+from .notifications import router as notifications_router
+from .licenses import router as licenses_router
 
 api_router = APIRouter()
 
@@ -21,3 +25,7 @@ api_router.include_router(coach_students_router, prefix="/coach-students", tags=
 api_router.include_router(bookings_router, prefix="/bookings", tags=["课程预约"])
 api_router.include_router(payments_router, prefix="/payments", tags=["支付管理"])
 api_router.include_router(evaluations_router, prefix="/evaluations", tags=["课后评价"])
+api_router.include_router(system_logs_router, prefix="/system-logs", tags=["系统日志"])
+api_router.include_router(competitions_router, prefix="/competitions", tags=["比赛管理"])
+api_router.include_router(notifications_router, prefix="/notifications", tags=["通知管理"])
+api_router.include_router(licenses_router, prefix="/licenses", tags=["软件授权"])
