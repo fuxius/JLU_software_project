@@ -7,6 +7,7 @@ from .students import router as students_router
 from .coach_students import router as coach_students_router
 from .bookings import router as bookings_router
 from .payments import router as payments_router
+from .evaluations import router as evaluations_router
 
 api_router = APIRouter()
 
@@ -19,3 +20,4 @@ api_router.include_router(students_router, prefix="/students", tags=["学员管�
 api_router.include_router(coach_students_router, prefix="/coach-students", tags=["教练学员关系"])
 api_router.include_router(bookings_router, prefix="/bookings", tags=["课程预约"])
 api_router.include_router(payments_router, prefix="/payments", tags=["支付管理"])
+api_router.include_router(evaluations_router, prefix="/evaluations", tags=["课后评价"])
