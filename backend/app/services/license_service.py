@@ -10,18 +10,18 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, desc
 from fastapi import HTTPException, status
 
-from models.license import License, LicenseActivation, LicenseUsageLog, LicenseStatus, LicenseType
-from models.user import User, UserRole
-from models.campus import Campus
-from models.payment import Payment, PaymentType, PaymentStatus
-from schemas.license import (
+from ..models.license import License, LicenseActivation, LicenseUsageLog, LicenseStatus, LicenseType
+from ..models.user import User, UserRole
+from ..models.campus import Campus
+from ..models.payment import Payment, PaymentType, PaymentStatus
+from ..schemas.license import (
     LicenseCreate, LicenseUpdate, LicenseQuery,
     LicenseValidationRequest, LicenseValidationResponse,
     LicenseActivationCreate, LicenseRenewalRequest,
     LicenseUsageStats, LicenseStatistics, HeartbeatRequest
 )
-from services.payment_service import PaymentService
-from services.system_log_service import SystemLogService
+from .payment_service import PaymentService
+from .system_log_service import SystemLogService
 
 
 class LicenseService:

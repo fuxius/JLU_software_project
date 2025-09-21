@@ -5,11 +5,11 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
-from database import get_db
-from models.user import User
-from services.auth_service import get_current_user
-from services.license_service import LicenseService
-from schemas.license import (
+from ...db.database import get_db
+from ...models.user import User
+from ...core.deps import get_current_user
+from ...services.license_service import LicenseService
+from ...schemas.license import (
     LicenseCreate, LicenseUpdate, LicenseResponse, LicenseQuery,
     LicenseValidationRequest, LicenseValidationResponse,
     LicenseRenewalRequest, LicenseStatistics, HeartbeatRequest

@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Enum, Text
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
 from ..db.database import Base
@@ -29,6 +30,9 @@ class User(Base):
     is_active = Column(Integer, default=1, comment="是否激活")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), comment="创建时间")
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), comment="更新时间")
+    
+    # 关系
+    notification_settings = relationship("UserNotificationSettings", back_populates="user", uselist=False)
     
     def __repr__(self):
         return f"<User(id={self.id}, username='{self.username}', role='{self.role}')>"

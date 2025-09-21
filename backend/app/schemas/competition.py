@@ -45,7 +45,7 @@ class CompetitionResponse(CompetitionBase):
 
 class CompetitionRegistrationBase(BaseModel):
     competition_id: int = Field(..., description="比赛ID")
-    group_type: str = Field(..., regex="^[ABC]$", description="报名组别: A/B/C")
+    group_type: str = Field(..., pattern="^[ABC]$", description="报名组别: A/B/C")
 
 
 class CompetitionRegistrationCreate(CompetitionRegistrationBase):
@@ -66,7 +66,7 @@ class CompetitionRegistrationResponse(CompetitionRegistrationBase):
 
 class CompetitionMatchBase(BaseModel):
     competition_id: int = Field(..., description="比赛ID")
-    group_type: str = Field(..., regex="^[ABC]$", description="比赛组别")
+    group_type: str = Field(..., pattern="^[ABC]$", description="比赛组别")
     round_number: int = Field(..., description="轮次")
     match_number: int = Field(..., description="对阵编号")
     player1_id: Optional[int] = Field(None, description="选手1ID")
@@ -121,7 +121,7 @@ class CompetitionQuery(BaseModel):
 
 class DrawRequest(BaseModel):
     competition_id: int = Field(..., description="比赛ID")
-    group_type: str = Field(..., regex="^[ABC]$", description="组别")
+    group_type: str = Field(..., pattern="^[ABC]$", description="组别")
 
 
 class CompetitionStatistics(BaseModel):

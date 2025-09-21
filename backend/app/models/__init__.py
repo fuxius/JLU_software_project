@@ -7,9 +7,10 @@ from .course import Course, CourseStatus
 from .booking import Booking, BookingStatus
 from .payment import Payment, PaymentMethod, PaymentStatus
 from .evaluation import Evaluation
-from .competition import Competition, CompetitionGroup, CompetitionRegistration
+from .competition import Competition, CompetitionGroup, CompetitionRegistration, CompetitionMatch
 from .system_log import SystemLog
-from .license import License
+from .notification import Notification, NotificationTemplate, UserNotificationSettings
+from .license import License, LicenseActivation, LicenseUsageLog
 
 __all__ = [
     "User", "UserRole",
@@ -21,7 +22,8 @@ __all__ = [
     "Booking", "BookingStatus", 
     "Payment", "PaymentMethod", "PaymentStatus",
     "Evaluation",
-    "Competition", "CompetitionGroup", "CompetitionRegistration",
+    "Competition", "CompetitionGroup", "CompetitionRegistration", "CompetitionMatch",
     "SystemLog",
-    "License"
+    "Notification", "NotificationTemplate", "UserNotificationSettings",
+    "License", "LicenseActivation", "LicenseUsageLog"
 ]

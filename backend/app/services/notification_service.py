@@ -7,18 +7,18 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, desc
 from fastapi import HTTPException, status
 
-from models.notification import (
+from ..models.notification import (
     Notification, NotificationTemplate, UserNotificationSettings,
     NotificationType, NotificationPriority
 )
-from models.user import User, UserRole
-from schemas.notification import (
+from ..models.user import User, UserRole
+from ..schemas.notification import (
     NotificationCreate, NotificationUpdate, NotificationQuery,
     NotificationTemplateCreate, NotificationTemplateUpdate,
     UserNotificationSettingsUpdate, NotificationStatistics,
     BulkNotificationCreate
 )
-from services.system_log_service import SystemLogService
+from .system_log_service import SystemLogService
 
 
 class NotificationService:

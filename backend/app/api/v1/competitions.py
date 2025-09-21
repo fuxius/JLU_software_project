@@ -5,11 +5,11 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
-from database import get_db
-from models.user import User
-from services.auth_service import get_current_user
-from services.competition_service import CompetitionService
-from schemas.competition import (
+from ...db.database import get_db
+from ...models.user import User
+from ...core.deps import get_current_user
+from ...services.competition_service import CompetitionService
+from ...schemas.competition import (
     CompetitionCreate, CompetitionUpdate, CompetitionResponse, CompetitionQuery,
     CompetitionRegistrationCreate, CompetitionRegistrationResponse,
     CompetitionMatchCreate, CompetitionMatchUpdate, CompetitionMatchResponse,
@@ -91,7 +91,7 @@ def update_competition(
 @router.post("/{competition_id}/register", response_model=CompetitionRegistrationResponse, summary="报名比赛")
 def register_competition(
     competition_id: int,
-    group_type: str = Query(..., regex="^[ABC]$", description="报名组别: A/B/C"),
+    group_type: str = Query(..., pattern="^[ABC]$", description="报名组别: A/B/C"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -114,7 +114,7 @@ def register_competition(
 @router.get("/{competition_id}/registrations", response_model=List[CompetitionRegistrationResponse], summary="获取报名列表")
 def get_registrations(
     competition_id: int,
-    group_type: str = Query(None, regex="^[ABC]$", description="组别筛选"),
+    group_type: str = Query(None, pattern="^[ABC]$", description="组别筛选"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -139,7 +139,7 @@ def get_registrations(
 @router.post("/{competition_id}/draw", response_model=List[CompetitionMatchResponse], summary="生成比赛对阵")
 def generate_draw(
     competition_id: int,
-    group_type: str = Query(..., regex="^[ABC]$", description="组别"),
+    group_type: str = Query(..., pattern="^[ABC]$", description="组别"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -162,7 +162,7 @@ def generate_draw(
 @router.get("/{competition_id}/matches", response_model=List[CompetitionMatchResponse], summary="获取比赛对阵")
 def get_matches(
     competition_id: int,
-    group_type: str = Query(None, regex="^[ABC]$", description="组别筛选"),
+    group_type: str = Query(None, pattern="^[ABC]$", description="组别筛选"),
     db: Session = Depends(get_db)
 ):
     """获取比赛对阵列表"""

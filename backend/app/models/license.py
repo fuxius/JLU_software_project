@@ -4,7 +4,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from database import Base
+from ..db.database import Base
 import enum
 
 

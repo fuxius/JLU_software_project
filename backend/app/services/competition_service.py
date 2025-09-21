@@ -9,17 +9,17 @@ from sqlalchemy import and_, or_, func
 from fastapi import HTTPException, status
 import random
 
-from models.competition import Competition, CompetitionRegistration, CompetitionMatch, CompetitionStatus
-from models.user import User, UserRole
-from models.student import Student
-from models.payment import Payment, PaymentType, PaymentStatus
-from schemas.competition import (
+from ..models.competition import Competition, CompetitionRegistration, CompetitionMatch, CompetitionStatus
+from ..models.user import User, UserRole
+from ..models.student import Student
+from ..models.payment import Payment, PaymentType, PaymentStatus
+from ..schemas.competition import (
     CompetitionCreate, CompetitionUpdate, CompetitionQuery,
     CompetitionRegistrationCreate, CompetitionMatchCreate, CompetitionMatchUpdate,
     DrawRequest, CompetitionStatistics
 )
-from services.payment_service import PaymentService
-from services.system_log_service import SystemLogService
+from .payment_service import PaymentService
+from .system_log_service import SystemLogService
 
 
 class CompetitionService:

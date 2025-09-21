@@ -4,7 +4,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey, Enum, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from database import Base
+from ..db.database import Base
 import enum
 
 
@@ -91,7 +91,7 @@ class CompetitionMatch(Base):
     actual_start_time = Column(DateTime(timezone=True), comment="实际开始时间")
     actual_end_time = Column(DateTime(timezone=True), comment="实际结束时间")
     
-    table_id = Column(Integer, ForeignKey("tables.id"), comment="球台ID")
+    table_number = Column(String(10), comment="球台编号")
     referee_notes = Column(Text, comment="裁判备注")
     
     created_at = Column(DateTime(timezone=True), server_default=func.now(), comment="创建时间")
@@ -102,4 +102,3 @@ class CompetitionMatch(Base):
     player1 = relationship("Student", foreign_keys=[player1_id])
     player2 = relationship("Student", foreign_keys=[player2_id])
     winner = relationship("Student", foreign_keys=[winner_id])
-    table = relationship("Table")
