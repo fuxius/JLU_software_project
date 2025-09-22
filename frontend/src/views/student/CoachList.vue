@@ -52,7 +52,10 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 import { coachApi } from '@/api/coaches'
+
+const router = useRouter()
 
 const searchForm = reactive({
   name: '',
@@ -113,10 +116,19 @@ const resetSearch = () => {
 }
 
 const selectCoach = (coach: any) => {
-  ElMessage.success(`已选择教练：${coach.name}`)
+  // 跳转到预约页面，并传递教练信息
+  router.push({
+    path: '/student/booking',
+    query: {
+      coachId: coach.id,
+      coachName: coach.name,
+      hourlyRate: coach.hourly_rate
+    }
+  })
 }
 
 const viewCoachDetail = (coach: any) => {
+  // TODO: 跳转到教练详情页面
   ElMessage.info(`查看教练详情：${coach.name}`)
 }
 

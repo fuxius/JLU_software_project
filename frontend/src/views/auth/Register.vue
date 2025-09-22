@@ -48,9 +48,9 @@
         </el-form-item>
         
         <el-form-item label="性别" prop="gender">
-          <el-radio-group v-model="registerForm.gender">
-            <el-radio value="male">男</el-radio>
-            <el-radio value="female">女</el-radio>
+          <el-radio-group v-model="registerForm.gender" size="default">
+            <el-radio value="male" label="男">男</el-radio>
+            <el-radio value="female" label="女">女</el-radio>
           </el-radio-group>
         </el-form-item>
         

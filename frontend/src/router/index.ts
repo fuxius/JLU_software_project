@@ -119,10 +119,20 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
+        path: 'booking',
+        name: 'StudentBooking',
+        component: () => import('@/views/student/Booking.vue'),
+        meta: {
+          title: '预约教练',
+          requiresAuth: true,
+          roles: ['student']
+        }
+      },
+      {
         path: 'competitions',
         name: 'StudentCompetitions',
         component: () => import('@/views/student/Competitions.vue'),
-        meta: { 
+        meta: {
           title: '比赛报名',
           requiresAuth: true,
           roles: ['student']

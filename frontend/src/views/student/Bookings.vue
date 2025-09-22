@@ -36,7 +36,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { bookingApi } from '@/api/bookings'
 
 const bookingList = ref([])
 
@@ -64,20 +65,73 @@ const getStatusTagType = (status: string) => {
 
 const loadBookingList = async () => {
   // TODO: 调用获取预约列表API
-  bookingList.value = [
-    {
-      id: 1,
-      coach_name: '张教练',
-      start_time: '2024-01-15 14:00',
-      end_time: '2024-01-15 15:00',
-      table_number: 1,
-      status: 'pending'
-    }
-  ]
+  // const result = await bookingApi.getBookingList()
+  // bookingList.value = result.data
+
+  // 从localStorage读取预约记录
+  const savedBookings = localStorage.getItem('student_bookings')
+  if (savedBookings) {
+    bookingList.value = JSON.parse(savedBookings)
+  } else {
+    // 默认数据
+    bookingList.value = [
+      {
+        id: 1,
+        coach_name: '张教练',
+        start_time: '2024-01-15 14:00',
+        end_time: '2024-01-15 15:00',
+        table_number: 1,
+        status: 'pending',
+        total_fee: 200
+      }
+    ]
+  }
 }
 
-const cancelBooking = (booking: any) => {
-  ElMessage.success(`已取消预约：${booking.coach_name}`)
+const cancelBooking = async (booking: any) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要取消与 ${booking.coach_name} 教练的预约吗？`,
+      '确认取消',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+
+    // TODO: 调用取消预约API
+    // await bookingApi.cancelBooking(booking.id)
+
+    // 模拟API调用
+    booking.status = 'cancelled'
+
+    // 如果预约已付款，退还费用到余额
+    if (booking.total_fee) {
+      const currentBalance = parseInt(localStorage.getItem('student_balance') || '500')
+      const newBalance = currentBalance + booking.total_fee
+      localStorage.setItem('student_balance', newBalance.toString())
+    }
+
+    // 更新localStorage中的预约记录
+    const existingBookings = JSON.parse(localStorage.getItem('student_bookings') || '[]')
+    const updatedBookings = existingBookings.map((b: any) =>
+      b.id === booking.id ? { ...b, status: 'cancelled' } : b
+    )
+    localStorage.setItem('student_bookings', JSON.stringify(updatedBookings))
+
+    ElMessage.success(`已取消预约：${booking.coach_name}`)
+
+    // 刷新预约列表
+    await loadBookingList()
+  } catch (error: any) {
+    if (error === 'cancel') {
+      // 用户取消操作
+      return
+    }
+    console.error('取消预约失败:', error)
+    ElMessage.error('取消预约失败，请重试')
+  }
 }
 
 onMounted(() => {
