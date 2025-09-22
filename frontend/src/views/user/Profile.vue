@@ -49,8 +49,8 @@
           <el-col :span="12">
             <el-form-item label="性别" prop="gender">
               <el-radio-group v-model="profileForm.gender">
-                <el-radio value="male">男</el-radio>
-                <el-radio value="female">女</el-radio>
+                <el-radio label="male">男</el-radio>
+                <el-radio label="female">女</el-radio>
               </el-radio-group>
             </el-form-item>
           </el-col>
@@ -128,6 +128,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, FormInstance } from 'element-plus'
 import { useUserStore } from '@/store/user'
+import { authApi } from '@/api/auth'
 
 const userStore = useUserStore()
 const profileFormRef = ref<FormInstance>()
@@ -213,8 +214,17 @@ const saveProfile = async () => {
     await profileFormRef.value.validate()
     saving.value = true
     
-    // TODO: 调用更新用户信息API
-    console.log('保存用户信息:', profileForm)
+    // 调用更新用户信息API
+    const payload = {
+      real_name: profileForm.realName,
+      gender: profileForm.gender,
+      age: profileForm.age,
+      phone: profileForm.phone,
+      email: profileForm.email
+    }
+    const updated = await authApi.updateCurrentUser(payload)
+    // 同步到store
+    userStore.user = updated
     
     ElMessage.success('保存成功！')
     isEditing.value = false
@@ -233,10 +243,9 @@ const changePassword = async () => {
     await passwordFormRef.value.validate()
     changingPassword.value = true
     
-    // TODO: 调用修改密码API
-    console.log('修改密码:', {
-      oldPassword: passwordForm.oldPassword,
-      newPassword: passwordForm.newPassword
+    await authApi.changePassword({
+      old_password: passwordForm.oldPassword,
+      new_password: passwordForm.newPassword
     })
     
     ElMessage.success('密码修改成功！')
@@ -252,19 +261,33 @@ const changePassword = async () => {
   }
 }
 
-const loadUserProfile = () => {
-  // TODO: 从API加载用户信息
-  // 暂时使用模拟数据
-  Object.assign(profileForm, {
-    username: 'demo_user',
-    role: '学员',
-    realName: '张三',
-    gender: 'male',
-    age: 25,
-    phone: '13800138000',
-    email: 'demo@example.com',
-    createdAt: '2024-01-01 12:00:00'
-  })
+const roleMap: Record<string, string> = {
+  STUDENT: '学员',
+  COACH: '教练',
+  CAMPUS_ADMIN: '校区管理员',
+  SUPER_ADMIN: '超级管理员'
+}
+
+const loadUserProfile = async () => {
+  try {
+    const user = await authApi.getCurrentUser()
+    // 映射后端字段到表单
+    Object.assign(profileForm, {
+      username: user.username,
+      role: roleMap[user.role] || user.role,
+      realName: user.real_name || '',
+      gender: user.gender || 'male',
+      age: user.age ?? 18,
+      phone: user.phone || '',
+      email: user.email || '',
+      createdAt: user.created_at || ''
+    })
+    // 同步store
+    userStore.user = user
+  } catch (error) {
+    console.error('加载个人信息失败:', error)
+    ElMessage.error('加载个人信息失败')
+  }
 }
 
 onMounted(() => {

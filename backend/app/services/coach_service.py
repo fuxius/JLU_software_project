@@ -23,7 +23,7 @@ class CoachService:
         limit: int = 100
     ) -> List[Coach]:
         """获取教练列表"""
-        query = db.query(Coach).join(User)
+        query = db.query(Coach).join(User, Coach.user_id == User.id)
         
         if campus_id:
             query = query.filter(User.campus_id == campus_id)
@@ -46,9 +46,9 @@ class CoachService:
         campus_id: Optional[int] = None
     ) -> List[Coach]:
         """搜索教练"""
-        query = db.query(Coach).join(User)
+        query = db.query(Coach).join(User, Coach.user_id == User.id)
         
-        filters = [Coach.is_approved == True]
+        filters = [Coach.approval_status == "approved"]
         
         if name:
             filters.append(User.real_name.ilike(f"%{name}%"))
@@ -88,7 +88,7 @@ class CoachService:
             hourly_rate=coach_data.hourly_rate,
             bio=coach_data.bio,
             achievements=coach_data.achievements,
-            is_approved=False  # 需要管理员审核
+            approval_status="pending"  # 需要管理员审核
         )
         
         db.add(coach)
@@ -142,7 +142,7 @@ class CoachService:
         if not coach:
             raise ValueError("教练不存在")
         
-        coach.is_approved = approved
+        coach.approval_status = "approved" if approved else "rejected"
         
         # 如果审核通过，更新用户角色为教练
         if approved:
@@ -223,7 +223,7 @@ class CoachService:
         # 获取该校区的所有审核通过的教练
         coaches = db.query(Coach).join(User).filter(
             User.campus_id == campus_id,
-            Coach.is_approved == True
+            Coach.approval_status == "approved"
         ).all()
         
         available_coaches = []

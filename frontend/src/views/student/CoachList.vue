@@ -86,15 +86,12 @@ const getLevelTagType = (level: string) => {
 const loadCoachList = async () => {
   try {
     const userStore = useUserStore()
-    if (!userStore.user || !userStore.user.campus_id) {
-      ElMessage.error('用户信息不完整，请重新登录')
-      return
-    }
+    // campus_id 可选；如果有则带上
+    const params: any = {}
+    if (userStore.user?.campus_id) params.campus_id = userStore.user.campus_id
 
     // 调用获取教练列表API
-    const response = await coachApi.getCoaches({
-      campus_id: userStore.user.campus_id
-    })
+    const response = await coachApi.getCoaches(params)
 
     coachList.value = response
   } catch (error) {
