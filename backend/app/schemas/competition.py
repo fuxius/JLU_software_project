@@ -60,6 +60,7 @@ class CompetitionRegistrationResponse(CompetitionRegistrationBase):
     is_confirmed: bool
     created_at: datetime
     student: Optional[StudentResponse] = None
+    competition: Optional[CompetitionResponse] = None
     
     class Config:
         from_attributes = True

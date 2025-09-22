@@ -62,24 +62,9 @@ const loadCompetitions = async () => {
 
 const loadMyRegistrations = async () => {
   try {
-    // 获取所有比赛的报名记录
-    const competitions = competitionList.value
-    const allRegistrations = []
-
-    for (const competition of competitions) {
-      try {
-        const registrations = await competitionApi.getRegistrations(competition.id)
-        // 只添加当前用户的报名记录
-        const userRegistrations = registrations.filter((reg: any) =>
-          reg.student_id === 1 // TODO: 从用户store获取实际用户ID
-        )
-        allRegistrations.push(...userRegistrations)
-      } catch (error) {
-        console.error(`加载比赛${competition.id}的报名记录失败:`, error)
-      }
-    }
-
-    myRegistrations.value = allRegistrations
+    const registrations = await competitionApi.getMyRegistrations()
+    myRegistrations.value = registrations
+    console.log('我的报名记录:', registrations)
   } catch (error) {
     console.error('加载我的报名失败:', error)
     ElMessage.error('加载我的报名失败')

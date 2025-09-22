@@ -202,6 +202,11 @@ export const competitionApi = {
     return request.put<CompetitionMatch>(`/competitions/matches/${matchId}`, data)
   },
 
+  // 获取我的所有报名
+  getMyRegistrations: () => {
+    return request.get<CompetitionRegistrationResponse[]>('/competitions/my-registrations')
+  },
+
   // 获取比赛统计
   getStatistics: () => {
     return request.get<CompetitionStatistics>('/competitions/statistics/summary')

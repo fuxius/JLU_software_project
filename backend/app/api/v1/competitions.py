@@ -3,7 +3,7 @@
 """
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from ...db.database import get_db
 from ...models.user import User
@@ -59,6 +59,34 @@ def get_competitions(
     )
     competitions = CompetitionService.get_competitions(db, query)
     return [CompetitionResponse.from_orm(comp) for comp in competitions]
+
+
+@router.get("/my-registrations", response_model=List[CompetitionRegistrationResponse], summary="获取我的所有报名")
+def get_my_registrations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取当前用户的所有比赛报名
+    
+    - 只返回当前用户的报名记录
+    - 包含比赛信息
+    """
+    from ...models.student import Student
+    from ...models.competition import CompetitionRegistration
+    
+    # 获取当前用户的student记录
+    student = db.query(Student).filter(Student.user_id == current_user.id).first()
+    if not student:
+        return []
+    
+    # 获取该学员的所有报名记录
+    registrations = db.query(CompetitionRegistration).options(
+        joinedload(CompetitionRegistration.student).joinedload(Student.user),
+        joinedload(CompetitionRegistration.competition)
+    ).filter(CompetitionRegistration.student_id == student.id).all()
+    
+    return [CompetitionRegistrationResponse.from_orm(reg) for reg in registrations]
 
 
 @router.get("/{competition_id}", response_model=CompetitionResponse, summary="获取比赛详情")
@@ -128,10 +156,16 @@ def get_registrations(
     
     # 权限控制
     if current_user.role.value != "admin":
-        registrations = [
-            reg for reg in registrations 
-            if reg.student_id == current_user.student.id
-        ]
+        # 获取当前用户的student记录
+        from ...models.student import Student
+        student = db.query(Student).filter(Student.user_id == current_user.id).first()
+        if student:
+            registrations = [
+                reg for reg in registrations 
+                if reg.student_id == student.id
+            ]
+        else:
+            registrations = []
     
     return [CompetitionRegistrationResponse.from_orm(reg) for reg in registrations]
 

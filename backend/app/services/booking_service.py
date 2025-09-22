@@ -318,6 +318,9 @@ class BookingService:
             student = db.query(Student).filter(Student.user_id == current_user.id).first()
             if student:
                 query = query.filter(Booking.student_id == student.id)
+            else:
+                # 学员用户但暂未建立student扩展记录，返回空列表而不是403
+                return []
         elif current_user.role == UserRole.COACH:
             coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
             if coach:
