@@ -177,10 +177,17 @@ const submitBooking = async () => {
     submitting.value = true
 
     try {
+      // 获取当前用户信息
+      const userStore = useUserStore()
+      if (!userStore.user || !userStore.user.campus_id) {
+        ElMessage.error('用户信息不完整，请重新登录')
+        return
+      }
+
       // 调用预约API
       const bookingData = {
         coach_id: selectedCoach.value.id,
-        campus_id: 1, // TODO: 从路由参数或用户选择获取
+        campus_id: userStore.user.campus_id,
         start_time: bookingForm.start_time,
         end_time: bookingForm.end_time,
         duration_hours: duration,
@@ -195,7 +202,11 @@ const submitBooking = async () => {
       router.push('/student/bookings')
     } catch (error: any) {
       console.error('预约失败:', error)
-      ElMessage.error(error.message || '预约失败，请重试')
+      if (error.response?.status === 403) {
+        ElMessage.error('权限不足或参数错误，请检查用户信息和教练信息')
+      } else {
+        ElMessage.error(error.message || '预约失败，请重试')
+      }
     } finally {
       submitting.value = false
     }

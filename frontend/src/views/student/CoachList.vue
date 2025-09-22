@@ -54,6 +54,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { coachApi } from '@/api/coaches'
+import { useUserStore } from '@/store/user'
 
 const router = useRouter()
 
@@ -83,27 +84,37 @@ const getLevelTagType = (level: string) => {
 }
 
 const loadCoachList = async () => {
-  // TODO: 调用获取教练列表API
-  coachList.value = [
-    {
-      id: 1,
-      name: '张教练',
-      level: 'senior',
-      hourly_rate: 200,
-      gender: 'male',
-      age: 30,
-      avatar: ''
-    },
-    {
-      id: 2,
-      name: '李教练',
-      level: 'intermediate',
-      hourly_rate: 150,
-      gender: 'female',
-      age: 28,
-      avatar: ''
+  try {
+    const userStore = useUserStore()
+    if (!userStore.user || !userStore.user.campus_id) {
+      ElMessage.error('用户信息不完整，请重新登录')
+      return
     }
-  ]
+
+    // 调用获取教练列表API
+    const response = await coachApi.getCoaches({
+      campus_id: userStore.user.campus_id,
+      status: 'approved'
+    })
+
+    coachList.value = response
+  } catch (error) {
+    console.error('加载教练列表失败:', error)
+    ElMessage.error('加载教练列表失败')
+
+    // 如果API失败，使用静态数据作为后备
+    coachList.value = [
+      {
+        id: 2, // 使用教练用户的ID
+        name: '张教练',
+        level: 'senior',
+        hourly_rate: 200,
+        gender: 'male',
+        age: 30,
+        avatar: ''
+      }
+    ]
+  }
 }
 
 const handleSearch = () => {
