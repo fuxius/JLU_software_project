@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import Optional, List
 from pydantic import BaseModel, Field
 from .user import UserResponse
+from .student import StudentResponse
 
 
 class CompetitionBase(BaseModel):
@@ -58,7 +59,7 @@ class CompetitionRegistrationResponse(CompetitionRegistrationBase):
     payment_id: Optional[int]
     is_confirmed: bool
     created_at: datetime
-    student: Optional[UserResponse] = None
+    student: Optional[StudentResponse] = None
     
     class Config:
         from_attributes = True

@@ -4,7 +4,7 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import List, Optional, Dict
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, func
 from fastapi import HTTPException, status
 import random
@@ -222,14 +222,19 @@ class CompetitionService:
         db.commit()
         db.refresh(registration)
         
+        # 重新查询以加载关联数据
+        registration = db.query(CompetitionRegistration).options(
+            joinedload(CompetitionRegistration.student).joinedload(Student.user)
+        ).filter(CompetitionRegistration.id == registration.id).first()
+        
         # 记录日志
         SystemLogService.log_action(
             db=db,
             user_id=current_user.id,
             action="register_competition",
-            resource_type="competition_registration",
-            resource_id=registration.id,
-            details=f"报名比赛: {competition.title} ({registration_data.group_type}组)"
+            description=f"报名比赛: {competition.title} ({registration_data.group_type}组)",
+            target_type="competition_registration",
+            target_id=registration.id
         )
         
         return registration
