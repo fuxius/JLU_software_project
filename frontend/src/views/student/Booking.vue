@@ -82,6 +82,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { bookingApi } from '@/api/bookings'
 
 const route = useRoute()
 const router = useRouter()
@@ -173,52 +174,31 @@ const submitBooking = async () => {
 
     const totalFee = Math.round(duration * selectedCoach.value.hourly_rate)
 
-    // 检查余额是否充足
-    const currentBalance = parseInt(localStorage.getItem('student_balance') || '500')
-    if (currentBalance < totalFee) {
-      ElMessage.error(`余额不足，当前余额：${currentBalance}元，需要：${totalFee}元`)
-      return
-    }
-
     submitting.value = true
 
-    // TODO: 调用预约API
-    // const result = await bookingApi.createBooking({
-    //   coach_id: selectedCoach.value.id,
-    //   start_time: bookingForm.start_time,
-    //   end_time: bookingForm.end_time,
-    //   table_number: bookingForm.table_number,
-    //   notes: bookingForm.notes,
-    //   total_fee: totalFee
-    // })
+    try {
+      // 调用预约API
+      const bookingData = {
+        coach_id: selectedCoach.value.id,
+        campus_id: 1, // TODO: 从路由参数或用户选择获取
+        start_time: bookingForm.start_time,
+        end_time: bookingForm.end_time,
+        duration_hours: duration,
+        booking_message: bookingForm.notes,
+        table_number: bookingForm.table_number?.toString()
+      }
 
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+      const result = await bookingApi.createBooking(bookingData)
 
-    // 创建预约记录
-    const newBooking = {
-      id: Date.now(), // 使用时间戳作为临时ID
-      coach_name: selectedCoach.value.name,
-      start_time: bookingForm.start_time,
-      end_time: bookingForm.end_time,
-      table_number: bookingForm.table_number,
-      status: 'pending',
-      total_fee: totalFee,
-      notes: bookingForm.notes
+      ElMessage.success(`预约成功！费用：${totalFee}元，预约时长：${duration}小时`)
+
+      router.push('/student/bookings')
+    } catch (error: any) {
+      console.error('预约失败:', error)
+      ElMessage.error(error.message || '预约失败，请重试')
+    } finally {
+      submitting.value = false
     }
-
-    // 保存预约记录到localStorage
-    const existingBookings = JSON.parse(localStorage.getItem('student_bookings') || '[]')
-    existingBookings.unshift(newBooking)
-    localStorage.setItem('student_bookings', JSON.stringify(existingBookings))
-
-    // 扣除费用并更新余额
-    const newBalance = currentBalance - totalFee
-    localStorage.setItem('student_balance', newBalance.toString())
-
-    ElMessage.success(`预约成功！费用：${totalFee}元，预约时长：${duration}小时`)
-
-    router.push('/student/bookings')
   } catch (error: any) {
     if (error !== 'validation failed') {
       console.error('预约失败:', error)

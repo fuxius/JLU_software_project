@@ -37,31 +37,74 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { competitionApi } from '@/api/competitions'
 
 const competitionList = ref([])
 const myRegistrations = ref([])
 
 const loadCompetitions = async () => {
-  // TODO: 调用获取比赛列表API
-  competitionList.value = [
-    {
-      id: 1,
-      name: '2024年1月月赛',
-      fee: 30,
-      date: '2024-01-28',
-      groups: ['甲组', '乙组', '丙组']
-    }
-  ]
+  try {
+    const response = await competitionApi.getCompetitions()
+    competitionList.value = response
+  } catch (error) {
+    console.error('加载比赛列表失败:', error)
+    ElMessage.error('加载比赛列表失败')
+  }
 }
 
 const loadMyRegistrations = async () => {
-  // TODO: 调用获取我的报名API
-  myRegistrations.value = []
+  try {
+    // 获取所有比赛的报名记录
+    const competitions = competitionList.value
+    const allRegistrations = []
+
+    for (const competition of competitions) {
+      try {
+        const registrations = await competitionApi.getRegistrations(competition.id)
+        // 只添加当前用户的报名记录
+        const userRegistrations = registrations.filter((reg: any) =>
+          reg.student_id === 1 // TODO: 从用户store获取实际用户ID
+        )
+        allRegistrations.push(...userRegistrations)
+      } catch (error) {
+        console.error(`加载比赛${competition.id}的报名记录失败:`, error)
+      }
+    }
+
+    myRegistrations.value = allRegistrations
+  } catch (error) {
+    console.error('加载我的报名失败:', error)
+    ElMessage.error('加载我的报名失败')
+  }
 }
 
-const registerCompetition = (competition: any) => {
-  ElMessage.success(`已报名比赛：${competition.name}`)
+const registerCompetition = async (competition: any) => {
+  try {
+    // 显示组别选择对话框
+    const { ElInput } = await import('element-plus')
+
+    ElMessageBox.prompt('请选择报名组别（A组、B组或C组）', '比赛报名', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPattern: /^[ABC]$/,
+      inputErrorMessage: '请输入A、B或C'
+    }).then(async ({ value }) => {
+      try {
+        const groupType = value.toUpperCase()
+        await competitionApi.registerCompetition(competition.id, groupType)
+        ElMessage.success(`已报名比赛：${competition.name}（${groupType}组）`)
+
+        // 重新加载我的报名记录
+        await loadMyRegistrations()
+      } catch (error: any) {
+        console.error('报名失败:', error)
+        ElMessage.error(error.message || '报名失败')
+      }
+    })
+  } catch (error) {
+    console.error('显示报名对话框失败:', error)
+  }
 }
 
 onMounted(() => {

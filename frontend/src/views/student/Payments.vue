@@ -44,6 +44,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { paymentApi } from '@/api/payments'
 
 const balance = ref(0)
 const paymentForm = reactive({
@@ -53,26 +54,27 @@ const paymentForm = reactive({
 const paymentHistory = ref([])
 
 const loadBalance = async () => {
-  // TODO: 调用获取余额API
-  // const result = await paymentApi.getBalance()
-  // balance.value = result.data.balance
-
-  // 从localStorage读取余额
-  const savedBalance = localStorage.getItem('student_balance')
-  balance.value = savedBalance ? parseInt(savedBalance) : 500
+  try {
+    // 调用获取余额API
+    const result = await paymentApi.getBalance()
+    balance.value = result.balance
+  } catch (error) {
+    console.error('加载余额失败:', error)
+    ElMessage.error('加载余额失败')
+    // 如果API失败，使用默认值
+    balance.value = 500
+  }
 }
 
 const loadPaymentHistory = async () => {
-  // TODO: 调用获取充值记录API
-  // const result = await paymentApi.getPaymentHistory()
-  // paymentHistory.value = result.data
-
-  // 从localStorage读取充值记录
-  const savedHistory = localStorage.getItem('student_payment_history')
-  if (savedHistory) {
-    paymentHistory.value = JSON.parse(savedHistory)
-  } else {
-    // 默认充值记录
+  try {
+    // 调用获取充值记录API
+    const result = await paymentApi.getPaymentRecords()
+    paymentHistory.value = result
+  } catch (error) {
+    console.error('加载充值记录失败:', error)
+    ElMessage.error('加载充值记录失败')
+    // 如果API失败，使用默认数据
     paymentHistory.value = [
       {
         amount: 200,
@@ -91,38 +93,19 @@ const handlePayment = async () => {
   }
 
   try {
-    // TODO: 调用实际的充值API
-    // const result = await paymentApi.recharge({
-    //   amount: paymentForm.amount,
-    //   method: paymentForm.method
-    // })
-
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // 创建充值记录
-    const paymentRecord = {
+    // 调用实际的充值API
+    const rechargeData = {
       amount: paymentForm.amount,
-      method: paymentForm.method === 'wechat' ? '微信支付' :
-              paymentForm.method === 'alipay' ? '支付宝' : '线下支付',
-      status: '已完成',
-      created_at: new Date().toLocaleString()
+      payment_method: paymentForm.method,
+      description: '账户充值'
     }
 
-    // 保存充值记录到localStorage
-    const existingHistory = JSON.parse(localStorage.getItem('student_payment_history') || '[]')
-    existingHistory.unshift(paymentRecord)
-    localStorage.setItem('student_payment_history', JSON.stringify(existingHistory))
-
-    // 更新余额
-    const currentBalance = parseInt(localStorage.getItem('student_balance') || '500')
-    const newBalance = currentBalance + paymentForm.amount
-    localStorage.setItem('student_balance', newBalance.toString())
-    balance.value = newBalance
+    const result = await paymentApi.recharge(rechargeData)
 
     ElMessage.success(`充值${paymentForm.amount}元成功`)
 
-    // 刷新充值记录
+    // 刷新余额和充值记录
+    await loadBalance()
     await loadPaymentHistory()
 
     // 重置表单

@@ -64,27 +64,13 @@ const getStatusTagType = (status: string) => {
 }
 
 const loadBookingList = async () => {
-  // TODO: 调用获取预约列表API
-  // const result = await bookingApi.getBookingList()
-  // bookingList.value = result.data
-
-  // 从localStorage读取预约记录
-  const savedBookings = localStorage.getItem('student_bookings')
-  if (savedBookings) {
-    bookingList.value = JSON.parse(savedBookings)
-  } else {
-    // 默认数据
-    bookingList.value = [
-      {
-        id: 1,
-        coach_name: '张教练',
-        start_time: '2024-01-15 14:00',
-        end_time: '2024-01-15 15:00',
-        table_number: 1,
-        status: 'pending',
-        total_fee: 200
-      }
-    ]
+  try {
+    // 调用获取预约列表API
+    const result = await bookingApi.getBookings()
+    bookingList.value = result
+  } catch (error) {
+    console.error('加载预约列表失败:', error)
+    ElMessage.error('加载预约列表失败')
   }
 }
 
@@ -100,25 +86,11 @@ const cancelBooking = async (booking: any) => {
       }
     )
 
-    // TODO: 调用取消预约API
-    // await bookingApi.cancelBooking(booking.id)
-
-    // 模拟API调用
-    booking.status = 'cancelled'
-
-    // 如果预约已付款，退还费用到余额
-    if (booking.total_fee) {
-      const currentBalance = parseInt(localStorage.getItem('student_balance') || '500')
-      const newBalance = currentBalance + booking.total_fee
-      localStorage.setItem('student_balance', newBalance.toString())
+    // 调用取消预约API
+    const cancelData = {
+      cancellation_reason: '学员主动取消'
     }
-
-    // 更新localStorage中的预约记录
-    const existingBookings = JSON.parse(localStorage.getItem('student_bookings') || '[]')
-    const updatedBookings = existingBookings.map((b: any) =>
-      b.id === booking.id ? { ...b, status: 'cancelled' } : b
-    )
-    localStorage.setItem('student_bookings', JSON.stringify(updatedBookings))
+    await bookingApi.cancelBooking(booking.id, cancelData)
 
     ElMessage.success(`已取消预约：${booking.coach_name}`)
 
