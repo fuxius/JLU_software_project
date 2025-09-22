@@ -16,8 +16,7 @@ def get_coaches(
     level: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """获取教练列表"""
     coaches = CoachService.get_coaches(db, campus_id, level, skip, limit)

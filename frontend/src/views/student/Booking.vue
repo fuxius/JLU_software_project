@@ -83,6 +83,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { bookingApi } from '@/api/bookings'
+import { useUserStore } from '@/store/user'
 
 const route = useRoute()
 const router = useRouter()
@@ -187,6 +188,7 @@ const submitBooking = async () => {
       // 调用预约API
       const bookingData = {
         coach_id: selectedCoach.value.id,
+        student_id: userStore.user.id, // 添加student_id
         campus_id: userStore.user.campus_id,
         start_time: bookingForm.start_time,
         end_time: bookingForm.end_time,

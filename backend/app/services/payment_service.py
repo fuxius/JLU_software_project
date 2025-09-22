@@ -56,10 +56,10 @@ class PaymentService:
         """创建充值记录"""
         payment = Payment(
             user_id=user_id,
-            type=PaymentType.RECHARGE,
+            type=str(PaymentType.RECHARGE),
             amount=amount,
             payment_method=payment_method,
-            status=PaymentStatus.PENDING,
+            status=str(PaymentStatus.PENDING),
             description=description or f"账户充值 {amount}元"
         )
         
@@ -79,13 +79,13 @@ class PaymentService:
                 detail="支付记录不存在"
             )
         
-        if payment.status != PaymentStatus.PENDING:
+        if payment.status != str(PaymentStatus.PENDING):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="支付状态无法更新"
             )
         
-        payment.status = PaymentStatus.SUCCESS
+        payment.status = str(PaymentStatus.SUCCESS)
         payment.transaction_id = transaction_id
         payment.paid_at = datetime.now()
         
@@ -116,7 +116,7 @@ class PaymentService:
             type=PaymentType.BOOKING,
             amount=amount,
             payment_method="balance",
-            status=PaymentStatus.SUCCESS,
+            status=str(PaymentStatus.SUCCESS),
             description=description,
             paid_at=datetime.now()
         )
@@ -144,7 +144,7 @@ class PaymentService:
             type=PaymentType.REFUND,
             amount=amount,
             payment_method="balance",
-            status=PaymentStatus.SUCCESS,
+            status=str(PaymentStatus.SUCCESS),
             description=description,
             paid_at=datetime.now()
         )
@@ -173,7 +173,7 @@ class PaymentService:
             type=PaymentType.RECHARGE,
             amount=amount,
             payment_method="offline",
-            status=PaymentStatus.SUCCESS,
+            status=str(PaymentStatus.SUCCESS),
             description=description or f"线下充值 {amount}元",
             paid_at=datetime.now()
         )

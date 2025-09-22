@@ -93,8 +93,7 @@ const loadCoachList = async () => {
 
     // 调用获取教练列表API
     const response = await coachApi.getCoaches({
-      campus_id: userStore.user.campus_id,
-      status: 'approved'
+      campus_id: userStore.user.campus_id
     })
 
     coachList.value = response

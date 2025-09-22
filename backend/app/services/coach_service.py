@@ -32,7 +32,7 @@ class CoachService:
             query = query.filter(Coach.level == level)
         
         # 只返回已审核通过的教练
-        query = query.filter(Coach.is_approved == True)
+        query = query.filter(Coach.approval_status == "approved")
         
         return query.offset(skip).limit(limit).all()
     

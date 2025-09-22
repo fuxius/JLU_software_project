@@ -8,10 +8,10 @@
       <div class="competition-list">
         <div v-for="competition in competitionList" :key="competition.id" class="competition-card">
           <el-card shadow="hover">
-            <h3>{{ competition.name }}</h3>
-            <p>报名费：{{ competition.fee }}元</p>
-            <p>比赛时间：{{ competition.date }}</p>
-            <p>组别：{{ competition.groups.join('、') }}</p>
+            <h3>{{ competition.title || competition.name }}</h3>
+            <p>报名费：{{ competition.registration_fee || competition.fee }}元</p>
+            <p>比赛时间：{{ competition.competition_date || competition.date }}</p>
+            <p>组别：甲组、乙组、丙组</p>
             <div class="actions">
               <el-button type="primary" @click="registerCompetition(competition)">报名</el-button>
             </div>
@@ -93,7 +93,7 @@ const registerCompetition = async (competition: any) => {
       try {
         const groupType = value.toUpperCase()
         await competitionApi.registerCompetition(competition.id, groupType)
-        ElMessage.success(`已报名比赛：${competition.name}（${groupType}组）`)
+        ElMessage.success(`已报名比赛：${competition.title}（${groupType}组）`)
 
         // 重新加载我的报名记录
         await loadMyRegistrations()

@@ -65,6 +65,11 @@ export interface PaymentQuery {
 // 支付相关API
 export const paymentApi = {
   // 创建充值订单
+  recharge: (data: RechargeRequest) => {
+    return request.post<PaymentResponse>('/payments/recharge', data)
+  },
+  
+  // 创建充值订单（别名）
   createRecharge: (data: RechargeRequest) => {
     return request.post<PaymentResponse>('/payments/recharge', data)
   },
