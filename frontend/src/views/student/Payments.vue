@@ -15,9 +15,9 @@
         </el-form-item>
         <el-form-item label="支付方式">
           <el-radio-group v-model="paymentForm.method" size="default">
-            <el-radio value="wechat" label="微信支付">微信支付</el-radio>
-            <el-radio value="alipay" label="支付宝">支付宝</el-radio>
-            <el-radio value="offline" label="线下支付">线下支付</el-radio>
+            <el-radio label="wechat">微信支付</el-radio>
+            <el-radio label="alipay">支付宝</el-radio>
+            <el-radio label="offline">线下支付</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item>

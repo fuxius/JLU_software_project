@@ -53,14 +53,18 @@ class PaymentService:
     
     @staticmethod
     def create_recharge(db: Session, user_id: int, amount: Decimal, payment_method: str, description: Optional[str] = None) -> Payment:
-        """创建充值记录"""
+        """创建充值记录
+        说明：为方便当前环境演示，线上充值创建后即视为成功并计入余额。
+        如需真实支付流程，可改为 PENDING 并通过回调/管理接口置为 SUCCESS。
+        """
         payment = Payment(
             user_id=user_id,
             type=str(PaymentType.RECHARGE),
             amount=amount,
             payment_method=payment_method,
-            status=str(PaymentStatus.PENDING),
-            description=description or f"账户充值 {amount}元"
+            status=str(PaymentStatus.SUCCESS),
+            description=description or f"账户充值 {amount}元",
+            paid_at=datetime.now()
         )
         
         db.add(payment)
