@@ -53,6 +53,18 @@ class CompetitionRegistrationCreate(CompetitionRegistrationBase):
     pass
 
 
+class CompetitionInfo(BaseModel):
+    """简化的比赛信息，避免循环引用"""
+    id: int
+    title: str
+    competition_date: datetime
+    registration_fee: Decimal
+    status: str
+    
+    class Config:
+        from_attributes = True
+
+
 class CompetitionRegistrationResponse(CompetitionRegistrationBase):
     id: int
     student_id: int
@@ -60,7 +72,7 @@ class CompetitionRegistrationResponse(CompetitionRegistrationBase):
     is_confirmed: bool
     created_at: datetime
     student: Optional[StudentResponse] = None
-    competition: Optional[CompetitionResponse] = None
+    competition: Optional[CompetitionInfo] = None
     
     class Config:
         from_attributes = True

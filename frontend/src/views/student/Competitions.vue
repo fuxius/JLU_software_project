@@ -63,8 +63,14 @@ const loadCompetitions = async () => {
 const loadMyRegistrations = async () => {
   try {
     const registrations = await competitionApi.getMyRegistrations()
-    myRegistrations.value = registrations
-    console.log('我的报名记录:', registrations)
+    // 转换数据格式以匹配表格显示
+    myRegistrations.value = registrations.map((reg: any) => ({
+      ...reg,
+      competition_name: reg.competition?.title || '未知比赛',
+      group: reg.group_type === 'A' ? '甲组' : reg.group_type === 'B' ? '乙组' : reg.group_type === 'C' ? '丙组' : reg.group_type,
+      status: reg.is_confirmed ? '已确认' : '待确认'
+    }))
+    console.log('我的报名记录:', myRegistrations.value)
   } catch (error) {
     console.error('加载我的报名失败:', error)
     ElMessage.error('加载我的报名失败')
