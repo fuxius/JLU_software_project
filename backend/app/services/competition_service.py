@@ -169,9 +169,18 @@ class CompetitionService:
             )
         
         # 检查是否已报名
+        # 获取学员ID，兼容关系未设置的情况
+        student = db.query(Student).filter(Student.user_id == current_user.id).first()
+        if not student:
+            # 自动为学员创建扩展记录
+            student = Student(user_id=current_user.id)
+            db.add(student)
+            db.commit()
+            db.refresh(student)
+
         existing = db.query(CompetitionRegistration).filter(
             CompetitionRegistration.competition_id == registration_data.competition_id,
-            CompetitionRegistration.student_id == current_user.student.id
+            CompetitionRegistration.student_id == student.id
         ).first()
         
         if existing:
@@ -204,7 +213,7 @@ class CompetitionService:
         # 创建报名记录
         registration = CompetitionRegistration(
             competition_id=registration_data.competition_id,
-            student_id=current_user.student.id,
+            student_id=student.id,
             group_type=registration_data.group_type,
             payment_id=payment.id
         )

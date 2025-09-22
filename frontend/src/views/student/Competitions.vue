@@ -11,7 +11,13 @@
             <h3>{{ competition.title || competition.name }}</h3>
             <p>报名费：{{ competition.registration_fee || competition.fee }}元</p>
             <p>比赛时间：{{ competition.competition_date || competition.date }}</p>
-            <p>组别：甲组、乙组、丙组</p>
+            <div class="group-select">
+              <el-select v-model="groupSelectMap[competition.id]" placeholder="选择组别" size="small" style="width: 120px;">
+                <el-option label="甲组" value="A" />
+                <el-option label="乙组" value="B" />
+                <el-option label="丙组" value="C" />
+              </el-select>
+            </div>
             <div class="actions">
               <el-button type="primary" @click="registerCompetition(competition)">报名</el-button>
             </div>
@@ -36,11 +42,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { competitionApi } from '@/api/competitions'
 
 const competitionList = ref([])
+const groupSelectMap = reactive<Record<number, string>>({})
 const myRegistrations = ref([])
 
 const loadCompetitions = async () => {
@@ -81,29 +88,14 @@ const loadMyRegistrations = async () => {
 
 const registerCompetition = async (competition: any) => {
   try {
-    // 显示组别选择对话框
-    const { ElInput } = await import('element-plus')
-
-    ElMessageBox.prompt('请选择报名组别（A组、B组或C组）', '比赛报名', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputPattern: /^[ABC]$/,
-      inputErrorMessage: '请输入A、B或C'
-    }).then(async ({ value }) => {
-      try {
-        const groupType = value.toUpperCase()
-        await competitionApi.registerCompetition(competition.id, groupType)
-        ElMessage.success(`已报名比赛：${competition.title}（${groupType}组）`)
-
-        // 重新加载我的报名记录
-        await loadMyRegistrations()
-      } catch (error: any) {
-        console.error('报名失败:', error)
-        ElMessage.error(error.message || '报名失败')
-      }
-    })
-  } catch (error) {
-    console.error('显示报名对话框失败:', error)
+    const groupType = groupSelectMap[competition.id] || 'A'
+    await competitionApi.registerCompetition(competition.id, groupType)
+    const groupMap: any = { A: '甲', B: '乙', C: '丙' }
+    ElMessage.success(`已报名比赛：${competition.title || competition.name}（${groupMap[groupType]}组）`)
+    await loadMyRegistrations()
+  } catch (error: any) {
+    console.error('报名失败:', error)
+    ElMessage.error(error.response?.data?.detail || error.message || '报名失败')
   }
 }
 

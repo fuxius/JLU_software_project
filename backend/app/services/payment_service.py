@@ -168,6 +168,36 @@ class PaymentService:
         )
         
         return payment
+
+    @staticmethod
+    def create_payment(
+        db: Session,
+        user_id: int,
+        amount: Decimal,
+        payment_type: "PaymentType",
+        description: Optional[str] = None,
+        method: str = "balance",
+    ) -> Payment:
+        """创建通用支付记录（当前环境直接记为成功）。
+
+        说明：为了便于演示，直接把支付状态置为 SUCCESS，并写入 paid_at；
+        如需接入真实支付，可改为 PENDING 并由回调置成功。
+        """
+        payment = Payment(
+            user_id=user_id,
+            type=str(payment_type),
+            amount=amount,
+            payment_method=method,
+            status=str(PaymentStatus.SUCCESS),
+            description=description,
+            paid_at=datetime.now(),
+        )
+
+        db.add(payment)
+        db.commit()
+        db.refresh(payment)
+
+        return payment
     
     @staticmethod
     def create_offline_payment(db: Session, user_id: int, amount: Decimal, operator_id: int, description: Optional[str] = None) -> Payment:

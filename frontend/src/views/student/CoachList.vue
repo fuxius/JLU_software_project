@@ -31,21 +31,38 @@
                 <el-avatar :size="80" :src="coach.avatar" />
               </div>
               <div class="coach-details">
-                <h3>{{ coach.name }}</h3>
+                <h3>{{ coach.user?.real_name || '教练' }}</h3>
                 <p><el-tag :type="getLevelTagType(coach.level)">{{ getLevelText(coach.level) }}</el-tag></p>
                 <p>收费：{{ coach.hourly_rate }}元/小时</p>
-                <p>性别：{{ coach.gender === 'male' ? '男' : '女' }}</p>
-                <p>年龄：{{ coach.age }}岁</p>
+                <p>性别：{{ (coach.user?.gender || 'male') === 'male' ? '男' : '女' }}</p>
+                <p>年龄：{{ coach.user?.age ?? '-' }}岁</p>
               </div>
             </div>
             <div class="coach-actions">
               <el-button type="primary" @click="selectCoach(coach)">选择教练</el-button>
-              <el-button @click="viewCoachDetail(coach)">查看详情</el-button>
+              <el-button @click="openCoachDetail(coach)">查看详情</el-button>
             </div>
           </el-card>
         </div>
       </div>
     </el-card>
+
+    <el-dialog v-model="detailVisible" title="教练详情" width="520px">
+      <div v-if="currentCoach">
+        <p>姓名：{{ currentCoach.user?.real_name || '-' }}</p>
+        <p>级别：{{ getLevelText(currentCoach.level) }}</p>
+        <p>收费：{{ currentCoach.hourly_rate }} 元/小时</p>
+        <p>性别：{{ (currentCoach.user?.gender || 'male') === 'male' ? '男' : '女' }}</p>
+        <p>年龄：{{ currentCoach.user?.age ?? '-' }}</p>
+        <p>简介：{{ currentCoach.achievements || '暂无' }}</p>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="detailVisible = false">关闭</el-button>
+          <el-button type="primary" @click="selectCoach(currentCoach)">选择教练</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -63,7 +80,9 @@ const searchForm = reactive({
   gender: ''
 })
 
-const coachList = ref([])
+const coachList = ref<any[]>([])
+const detailVisible = ref(false)
+const currentCoach = ref<any | null>(null)
 
 const getLevelText = (level: string) => {
   const levelMap: Record<string, string> = {
@@ -128,15 +147,15 @@ const selectCoach = (coach: any) => {
     path: '/student/booking',
     query: {
       coachId: coach.id,
-      coachName: coach.name,
+      coachName: coach.user?.real_name || '教练',
       hourlyRate: coach.hourly_rate
     }
   })
 }
 
-const viewCoachDetail = (coach: any) => {
-  // TODO: 跳转到教练详情页面
-  ElMessage.info(`查看教练详情：${coach.name}`)
+const openCoachDetail = (coach: any) => {
+  currentCoach.value = coach
+  detailVisible.value = true
 }
 
 onMounted(() => {
