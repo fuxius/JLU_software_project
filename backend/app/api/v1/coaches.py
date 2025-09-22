@@ -38,6 +38,22 @@ def search_coaches(
     )
     return [CoachResponse.from_orm(coach) for coach in coaches]
 
+@router.get("/my-students", summary="获取我的学员列表")
+def get_my_students(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """获取当前教练的学员列表"""
+    from ...models.coach import Coach
+    
+    # 获取当前用户的教练记录
+    coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
+    if not coach:
+        return []
+    
+    students = CoachService.get_coach_students(db, coach.id)
+    return students
+
 @router.get("/{coach_id}", response_model=CoachResponse, summary="获取教练详情")
 def get_coach(
     coach_id: int,

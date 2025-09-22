@@ -281,13 +281,25 @@ class BookingService:
             joinedload(Booking.student).joinedload(Student.user)
         )
         
-        # 暂时移除权限过滤，返回当前用户相关的预约
-        student = db.query(Student).filter(Student.user_id == current_user.id).first()
-        if student:
-            query = query.filter(Booking.student_id == student.id)
+        # 根据用户角色返回相关预约
+        user_role_str = str(current_user.role)
+        if user_role_str == "STUDENT" or current_user.role == UserRole.STUDENT:
+            # 学员：返回自己的预约
+            student = db.query(Student).filter(Student.user_id == current_user.id).first()
+            if student:
+                query = query.filter(Booking.student_id == student.id)
+            else:
+                return []
+        elif user_role_str == "COACH" or current_user.role == UserRole.COACH:
+            # 教练：返回自己作为教练的预约
+            coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
+            if coach:
+                query = query.filter(Booking.coach_id == coach.id)
+            else:
+                return []
         else:
-            # 如果没有学员记录，返回空列表
-            return []
+            # 管理员：返回所有预约（暂时不做校区限制）
+            pass
         
         if status:
             query = query.filter(Booking.status == status)

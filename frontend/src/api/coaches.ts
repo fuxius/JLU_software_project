@@ -43,6 +43,11 @@ export const coachApi = {
     return request.get(`/coaches/${id}/students`)
   },
 
+  // 获取我的学员列表（当前登录教练）
+  getMyStudents: () => {
+    return request.get('/coaches/my-students')
+  },
+
   // 获取教练课表
   getCoachSchedule: (id: number, params?: {
     date_from?: string

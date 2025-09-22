@@ -30,21 +30,37 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { coachApi } from '@/api/coaches'
 
 const studentList = ref([])
 
 const loadStudentList = async () => {
-  // TODO: 调用获取学员列表API
-  studentList.value = [
-    {
-      id: 1,
-      name: '小明',
-      phone: '13800138001',
-      age: 20,
-      gender: 'male',
-      created_at: '2024-01-01 10:00:00'
-    }
-  ]
+  try {
+    const students = await coachApi.getMyStudents()
+    studentList.value = students.map((student: any) => ({
+      id: student.id,
+      name: student.user?.real_name || student.name || '学员',
+      phone: student.user?.phone || '未提供',
+      age: student.user?.age || 0,
+      gender: student.user?.gender || 'male',
+      created_at: student.created_at ? new Date(student.created_at).toLocaleString() : '未知'
+    }))
+  } catch (error) {
+    console.error('加载学员列表失败:', error)
+    ElMessage.error('加载学员列表失败')
+    
+    // 如果API失败，使用静态数据作为后备
+    studentList.value = [
+      {
+        id: 1,
+        name: '小明',
+        phone: '13800138001',
+        age: 20,
+        gender: 'male',
+        created_at: '2024-01-01 10:00:00'
+      }
+    ]
+  }
 }
 
 const viewStudent = (student: any) => {
