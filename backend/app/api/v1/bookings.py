@@ -48,7 +48,18 @@ def get_bookings(
     - 超级管理员可以看所有预约
     """
     bookings = BookingService.get_bookings(db, current_user, status, skip, limit)
-    return [BookingResponse.from_orm(booking) for booking in bookings]
+    # 构造包含教练和学员姓名的响应
+    result = []
+    for booking in bookings:
+        booking_data = BookingResponse.from_orm(booking)
+        # 添加教练姓名
+        if booking.coach and booking.coach.user:
+            booking_data.coach_name = booking.coach.user.real_name
+        # 添加学员姓名
+        if booking.student and booking.student.user:
+            booking_data.student_name = booking.student.user.real_name
+        result.append(booking_data)
+    return result
 
 @router.get("/{booking_id}", response_model=BookingResponse, summary="获取预约详情")
 def get_booking(

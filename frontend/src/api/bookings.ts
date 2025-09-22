@@ -80,12 +80,12 @@ export interface ScheduleItem {
 export const bookingApi = {
   // 创建预约
   createBooking: (data: BookingCreate) => {
-    return request.post<BookingResponse>('/bookings', data)
+    return request.post<BookingResponse>('/bookings/', data)
   },
 
   // 获取预约列表
   getBookings: (params?: BookingQuery) => {
-    return request.get<BookingResponse[]>('/bookings', { params })
+    return request.get<BookingResponse[]>('/bookings/', { params })
   },
 
   // 获取预约详情
@@ -95,41 +95,41 @@ export const bookingApi = {
 
   // 确认/拒绝预约
   confirmBooking: (id: number, data: BookingConfirmation) => {
-    return request.put<BookingResponse>(`/bookings/${id}/confirm`, data)
+    return request.post<BookingResponse>(`/bookings/${id}/confirm`, data)
   },
 
   // 取消预约
   cancelBooking: (id: number, data: BookingCancellation) => {
-    return request.put<BookingResponse>(`/bookings/${id}/cancel`, data)
+    return request.post<BookingResponse>(`/bookings/${id}/cancel`, data)
   },
 
   // 获取教练课表
   getCoachSchedule: (params: ScheduleQuery) => {
-    return request.get<ScheduleItem[]>('/bookings/schedule', { params })
+    return request.get<ScheduleItem[]>(`/bookings/schedule/coach/${params.coach_id}?date_from=${params.date_from}&date_to=${params.date_to}`)
   },
 
   // 获取可用球台
   getAvailableCourts: (params: CourtQuery) => {
-    return request.get<string[]>('/bookings/available-courts', { params })
+    return request.get<string[]>(`/bookings/tables/available?campus_id=${params.campus_id}&start_time=${params.start_time}&end_time=${params.end_time}`)
   },
 
   // 获取我的预约（学员）
   getMyBookings: (params?: { status?: string; skip?: number; limit?: number }) => {
-    return request.get<BookingResponse[]>('/bookings/my', { params })
+    return request.get<BookingResponse[]>('/bookings/my/pending', { params })
   },
 
   // 获取待确认预约（教练）
   getPendingBookings: (params?: { skip?: number; limit?: number }) => {
-    return request.get<BookingResponse[]>('/bookings/pending', { params })
+    return request.get<BookingResponse[]>('/bookings/my/pending', { params })
   },
 
   // 获取今日课程
   getTodayBookings: () => {
-    return request.get<BookingResponse[]>('/bookings/today')
+    return request.get<BookingResponse[]>('/bookings/')
   },
 
   // 获取本周课程
   getWeekBookings: () => {
-    return request.get<BookingResponse[]>('/bookings/week')
+    return request.get<BookingResponse[]>('/bookings/')
   }
 }

@@ -104,10 +104,16 @@ const getLevelTagType = (level: string) => {
 
 const loadCoachList = async () => {
   try {
-    const userStore = useUserStore()
-    // campus_id 可选；如果有则带上
+    // 不限制校区，显示所有教练
     const params: any = {}
-    if (userStore.user?.campus_id) params.campus_id = userStore.user.campus_id
+    
+    // 添加搜索参数
+    if (searchForm.name) {
+      params.name = searchForm.name
+    }
+    if (searchForm.gender) {
+      params.gender = searchForm.gender
+    }
 
     // 调用获取教练列表API
     const response = await coachApi.getCoaches(params)
@@ -120,13 +126,32 @@ const loadCoachList = async () => {
     // 如果API失败，使用静态数据作为后备
     coachList.value = [
       {
-        id: 2, // 使用教练用户的ID
+        id: 1,
         name: '张教练',
         level: 'senior',
         hourly_rate: 200,
         gender: 'male',
         age: 30,
-        avatar: ''
+        avatar: '',
+        user: {
+          real_name: '张教练',
+          gender: 'male',
+          age: 30
+        }
+      },
+      {
+        id: 2,
+        name: '李教练',
+        level: 'intermediate',
+        hourly_rate: 150,
+        gender: 'female',
+        age: 28,
+        avatar: '',
+        user: {
+          real_name: '李教练',
+          gender: 'female',
+          age: 28
+        }
       }
     ]
   }

@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal
+from .user import UserResponse
 
 class BookingBase(BaseModel):
     """预约基础Schema"""
@@ -38,6 +39,10 @@ class BookingResponse(BookingBase):
     cancel_confirmed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    
+    # 添加关联信息
+    coach_name: Optional[str] = None
+    student_name: Optional[str] = None
     
     class Config:
         from_attributes = True

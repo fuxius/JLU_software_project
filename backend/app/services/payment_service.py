@@ -117,7 +117,7 @@ class PaymentService:
         # 创建消费记录
         payment = Payment(
             user_id=user_id,
-            type=PaymentType.BOOKING,
+            type=str(PaymentType.BOOKING),
             amount=amount,
             payment_method="balance",
             status=str(PaymentStatus.SUCCESS),
@@ -145,7 +145,7 @@ class PaymentService:
         """退费到用户余额"""
         payment = Payment(
             user_id=user_id,
-            type=PaymentType.REFUND,
+            type=str(PaymentType.REFUND),
             amount=amount,
             payment_method="balance",
             status=str(PaymentStatus.SUCCESS),
@@ -204,7 +204,7 @@ class PaymentService:
         """创建线下支付记录（管理员录入）"""
         payment = Payment(
             user_id=user_id,
-            type=PaymentType.RECHARGE,
+            type=str(PaymentType.RECHARGE),
             amount=amount,
             payment_method="offline",
             status=str(PaymentStatus.SUCCESS),

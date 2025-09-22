@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from fastapi import HTTPException, status
 
@@ -47,15 +47,18 @@ class BookingService:
                 detail="该时间段已有预约冲突"
             )
         
-        # 验证预约时间（不能预约过去的时间）
-        if booking_data.start_time <= datetime.now():
+        # 验证预约时间（不能预约过去的时间） - 统一使用UTC进行比较，避免时区混淆
+        now_utc = datetime.now(timezone.utc)
+        start_utc = booking_data.start_time.astimezone(timezone.utc) if booking_data.start_time.tzinfo else booking_data.start_time.replace(tzinfo=timezone.utc)
+        end_utc = booking_data.end_time.astimezone(timezone.utc) if booking_data.end_time.tzinfo else booking_data.end_time.replace(tzinfo=timezone.utc)
+        if start_utc <= now_utc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="不能预约过去的时间"
             )
         
         # 验证预约时间（不能超过7天）
-        if booking_data.start_time > datetime.now() + timedelta(days=7):
+        if start_utc > now_utc + timedelta(days=7):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="只能预约7天内的课程"
@@ -88,7 +91,7 @@ class BookingService:
             table_number=table_number,
             hourly_rate=coach.hourly_rate,
             total_cost=total_cost,
-            status=BookingStatus.PENDING,
+            status=BookingStatus.PENDING.value,
             booking_message=booking_data.booking_message
         )
         
@@ -113,7 +116,7 @@ class BookingService:
         """检查时间冲突"""
         conflicts = db.query(Booking).filter(
             Booking.coach_id == booking_data.coach_id,
-            Booking.status.in_([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+            Booking.status.in_([BookingStatus.PENDING.value, BookingStatus.CONFIRMED.value]),
             Booking.start_time < booking_data.end_time,
             Booking.end_time > booking_data.start_time
         ).first()
@@ -126,7 +129,7 @@ class BookingService:
         # 查询该时间段已占用的球台
         occupied_tables = db.query(Booking.table_number).filter(
             Booking.campus_id == campus_id,
-            Booking.status.in_([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+            Booking.status.in_([BookingStatus.PENDING.value, BookingStatus.CONFIRMED.value]),
             Booking.start_time < end_time,
             Booking.end_time > start_time,
             Booking.table_number.isnot(None)
@@ -155,7 +158,7 @@ class BookingService:
         
         # 暂时移除权限检查，允许所有用户确认预约
         
-        if booking.status != BookingStatus.PENDING:
+        if booking.status != BookingStatus.PENDING.value:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="只能确认待审核的预约"
@@ -169,9 +172,9 @@ class BookingService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="扣费失败，账户余额不足"
                 )
-            booking.status = BookingStatus.CONFIRMED
+            booking.status = BookingStatus.CONFIRMED.value
         elif action == "reject":
-            booking.status = BookingStatus.REJECTED
+            booking.status = BookingStatus.REJECTED.value
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -205,14 +208,15 @@ class BookingService:
         
         # 暂时移除权限检查，允许所有用户取消预约
         
-        if booking.status not in [BookingStatus.PENDING, BookingStatus.CONFIRMED]:
+        if booking.status not in [BookingStatus.PENDING.value, BookingStatus.CONFIRMED.value]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="该预约无法取消"
             )
         
-        # 检查24小时规则
-        if booking.start_time - datetime.now() < timedelta(hours=24):
+        # 检查24小时规则（统一时区）
+        now_relative = datetime.now(booking.start_time.tzinfo or timezone.utc)
+        if booking.start_time - now_relative < timedelta(hours=24):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="距离上课时间不足24小时，无法取消"
@@ -226,13 +230,14 @@ class BookingService:
             )
         
         # 取消预约
-        booking.status = BookingStatus.CANCELLED
+        original_status = booking.status
+        booking.status = BookingStatus.CANCELLED.value
         booking.cancelled_by = current_user.id
         booking.cancelled_at = datetime.now()
         booking.cancellation_reason = cancellation_data.cancellation_reason
         
         # 如果已确认的预约被取消，需要退费
-        if booking.status == BookingStatus.CONFIRMED:
+        if original_status == BookingStatus.CONFIRMED.value:
             from ..services.payment_service import PaymentService
             PaymentService.refund_balance(db, booking.student.user_id, booking.total_cost, f"预约取消退费 - 预约ID: {booking.id}")
         
@@ -253,8 +258,10 @@ class BookingService:
     @staticmethod
     def _check_monthly_cancel_limit(db: Session, user_id: int) -> bool:
         """检查当月取消次数限制"""
-        from datetime import date
-        current_month_start = date.today().replace(day=1)
+        from datetime import date, time
+        current_month_start_date = date.today().replace(day=1)
+        # 将比较边界设置为UTC的当月起始时间，避免时区导致的筛选误差
+        current_month_start = datetime.combine(current_month_start_date, time.min, tzinfo=timezone.utc)
         
         cancel_count = db.query(Booking).filter(
             Booking.cancelled_by == user_id,
@@ -267,7 +274,12 @@ class BookingService:
     @staticmethod
     def get_bookings(db: Session, current_user: User, status: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[Booking]:
         """获取预约列表"""
-        query = db.query(Booking)
+        from sqlalchemy.orm import joinedload
+        
+        query = db.query(Booking).options(
+            joinedload(Booking.coach).joinedload(Coach.user),
+            joinedload(Booking.student).joinedload(Student.user)
+        )
         
         # 暂时移除权限过滤，返回当前用户相关的预约
         student = db.query(Student).filter(Student.user_id == current_user.id).first()
@@ -301,7 +313,7 @@ class BookingService:
         """获取教练课表"""
         bookings = db.query(Booking).filter(
             Booking.coach_id == coach_id,
-            Booking.status.in_([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+            Booking.status.in_([BookingStatus.PENDING.value, BookingStatus.CONFIRMED.value]),
             Booking.start_time >= date_from,
             Booking.start_time < date_to
         ).all()
@@ -325,7 +337,7 @@ class BookingService:
         # 查询该时间段已占用的球台
         occupied_tables = db.query(Booking.table_number).filter(
             Booking.campus_id == campus_id,
-            Booking.status.in_([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+            Booking.status.in_([BookingStatus.PENDING.value, BookingStatus.CONFIRMED.value]),
             Booking.start_time < end_time,
             Booking.end_time > start_time,
             Booking.table_number.isnot(None)
