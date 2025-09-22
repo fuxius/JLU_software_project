@@ -17,7 +17,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150">
+        <el-table-column label="操作" width="200">
           <template #default="scope">
             <el-button 
               v-if="scope.row.status === 'pending'"
@@ -27,10 +27,49 @@
             >
               取消
             </el-button>
+            <el-button 
+              v-if="scope.row.status === 'confirmed'"
+              type="primary" 
+              size="small" 
+              @click="evaluateBooking(scope.row)"
+            >
+              评价
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
+
+    <!-- 评价对话框 -->
+    <el-dialog v-model="evaluationDialogVisible" title="课程评价" width="600px">
+      <el-form :model="evaluationForm" label-width="80px">
+        <el-form-item label="评分">
+          <el-rate 
+            v-model="evaluationForm.rating" 
+            :max="5" 
+            :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+            :texts="['很差', '差', '一般', '好', '很好']"
+            show-text
+          />
+        </el-form-item>
+        <el-form-item label="评价内容">
+          <el-input
+            v-model="evaluationForm.content"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入您对本次课程的评价..."
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="evaluationDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitEvaluation" :loading="submittingEvaluation">
+          提交评价
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

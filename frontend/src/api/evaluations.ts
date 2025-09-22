@@ -53,49 +53,49 @@ export interface PendingEvaluationCourse {
 export const evaluationApi = {
   // 创建评价
   createEvaluation: (data: EvaluationCreate) => {
-    return request.post<EvaluationResponse>('/evaluations', data)
+    return request.post<EvaluationResponse>('/evaluations/', data)
   },
 
   // 获取评价列表
   getEvaluations: (params?: EvaluationQuery) => {
-    return request.get<EvaluationResponse[]>('/evaluations', { params })
+    return request.get<EvaluationResponse[]>('/evaluations/', { params })
   },
 
   // 获取评价详情
   getEvaluation: (id: number) => {
-    return request.get<EvaluationResponse>(`/evaluations/${id}`)
+    return request.get<EvaluationResponse>(`/evaluations/${id}/`)
   },
 
   // 更新评价
   updateEvaluation: (id: number, data: EvaluationUpdate) => {
-    return request.put<EvaluationResponse>(`/evaluations/${id}`, data)
+    return request.put<EvaluationResponse>(`/evaluations/${id}/`, data)
   },
 
   // 删除评价
   deleteEvaluation: (id: number) => {
-    return request.delete(`/evaluations/${id}`)
+    return request.delete(`/evaluations/${id}/`)
   },
 
   // 获取课程的所有评价
   getCourseEvaluations: (courseId: number) => {
-    return request.get<EvaluationResponse[]>(`/evaluations/course/${courseId}`)
+    return request.get<EvaluationResponse[]>(`/evaluations/course/${courseId}/`)
   },
 
   // 获取我的待评价课程
   getMyPendingEvaluations: () => {
-    return request.get<PendingEvaluationCourse[]>('/evaluations/pending/my')
+    return request.get<PendingEvaluationCourse[]>('/evaluations/pending/my/')
   },
 
   // 获取评价统计
   getEvaluationStatistics: (userId?: number) => {
-    return request.get<EvaluationSummary>('/evaluations/statistics/summary', {
+    return request.get<EvaluationSummary>('/evaluations/statistics/summary/', {
       params: userId ? { user_id: userId } : undefined
     })
   },
 
   // 获取教练评价汇总
   getCoachEvaluationSummary: (coachId: number) => {
-    return request.get<EvaluationSummary>(`/evaluations/coach/${coachId}/summary`)
+    return request.get<EvaluationSummary>(`/evaluations/coach/${coachId}/summary/`)
   },
 
   // 获取评分星级组件数据
