@@ -1,4 +1,4 @@
-import request from './request'
+import request from '@/utils/request'
 
 // 支付相关类型定义
 export interface RechargeRequest {

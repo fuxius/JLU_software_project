@@ -1,4 +1,4 @@
-import request from './request'
+import request from '@/utils/request'
 import type { Campus } from '@/types'
 
 // 校区相关API

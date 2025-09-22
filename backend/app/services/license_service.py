@@ -397,16 +397,16 @@ class LicenseService:
         """获取授权统计信息"""
         total_licenses = db.query(License).count()
         active_licenses = db.query(License).filter(
-            License.status == LicenseStatus.ACTIVE.value
+            License.status == str(LicenseStatus.ACTIVE)
         ).count()
         expired_licenses = db.query(License).filter(
-            License.status == LicenseStatus.EXPIRED.value
+            License.status == str(LicenseStatus.EXPIRED)
         ).count()
-        
+
         # 即将过期（30天内）
         thirty_days_later = datetime.now() + timedelta(days=30)
         expiring_soon = db.query(License).filter(
-            License.status == LicenseStatus.ACTIVE.value,
+            License.status == str(LicenseStatus.ACTIVE),
             License.end_date <= thirty_days_later
         ).count()
         

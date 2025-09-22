@@ -25,30 +25,30 @@ class PaymentService:
         # 计算充值总额
         recharge_total = db.query(Payment).filter(
             Payment.user_id == user_id,
-            Payment.type == PaymentType.RECHARGE,
-            Payment.status == PaymentStatus.SUCCESS
+            Payment.type == str(PaymentType.RECHARGE),
+            Payment.status == str(PaymentStatus.SUCCESS)
         ).with_entities(Payment.amount).all()
-        
+
         recharge_sum = sum([p.amount for p in recharge_total]) if recharge_total else Decimal('0')
-        
+
         # 计算消费总额
         expense_total = db.query(Payment).filter(
             Payment.user_id == user_id,
-            Payment.type.in_([PaymentType.BOOKING, PaymentType.COMPETITION]),
-            Payment.status == PaymentStatus.SUCCESS
+            Payment.type.in_([str(PaymentType.BOOKING), str(PaymentType.COMPETITION)]),
+            Payment.status == str(PaymentStatus.SUCCESS)
         ).with_entities(Payment.amount).all()
-        
+
         expense_sum = sum([p.amount for p in expense_total]) if expense_total else Decimal('0')
-        
+
         # 计算退费总额
         refund_total = db.query(Payment).filter(
             Payment.user_id == user_id,
-            Payment.type == PaymentType.REFUND,
-            Payment.status == PaymentStatus.SUCCESS
+            Payment.type == str(PaymentType.REFUND),
+            Payment.status == str(PaymentStatus.SUCCESS)
         ).with_entities(Payment.amount).all()
-        
+
         refund_sum = sum([p.amount for p in refund_total]) if refund_total else Decimal('0')
-        
+
         return recharge_sum - expense_sum + refund_sum
     
     @staticmethod
@@ -198,10 +198,20 @@ class PaymentService:
     def get_payment_records(db: Session, user_id: int, payment_type: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[Payment]:
         """获取支付记录"""
         query = db.query(Payment).filter(Payment.user_id == user_id)
-        
+
         if payment_type:
             query = query.filter(Payment.type == payment_type)
-        
+
+        return query.order_by(Payment.created_at.desc()).offset(skip).limit(limit).all()
+
+    @staticmethod
+    def get_payment_records_by_type(db: Session, user_id: int, payment_type_enum: PaymentType, skip: int = 0, limit: int = 100) -> List[Payment]:
+        """根据枚举类型获取支付记录"""
+        query = db.query(Payment).filter(
+            Payment.user_id == user_id,
+            Payment.type == str(payment_type_enum)
+        )
+
         return query.order_by(Payment.created_at.desc()).offset(skip).limit(limit).all()
     
     @staticmethod

@@ -224,20 +224,20 @@ def get_payment_summary(
     # 计算各类金额
     recharge_total = db.query(Payment).filter(
         Payment.user_id == current_user.id,
-        Payment.type == PaymentType.RECHARGE,
-        Payment.status == PaymentStatus.SUCCESS
+        Payment.type == str(PaymentType.RECHARGE),
+        Payment.status == str(PaymentStatus.SUCCESS)
     ).with_entities(Payment.amount).all()
-    
+
     expense_total = db.query(Payment).filter(
         Payment.user_id == current_user.id,
-        Payment.type.in_([PaymentType.BOOKING, PaymentType.COMPETITION]),
-        Payment.status == PaymentStatus.SUCCESS
+        Payment.type.in_([str(PaymentType.BOOKING), str(PaymentType.COMPETITION)]),
+        Payment.status == str(PaymentStatus.SUCCESS)
     ).with_entities(Payment.amount).all()
-    
+
     refund_total = db.query(Payment).filter(
         Payment.user_id == current_user.id,
-        Payment.type == PaymentType.REFUND,
-        Payment.status == PaymentStatus.SUCCESS
+        Payment.type == str(PaymentType.REFUND),
+        Payment.status == str(PaymentStatus.SUCCESS)
     ).with_entities(Payment.amount).all()
     
     payment_count = db.query(Payment).filter(

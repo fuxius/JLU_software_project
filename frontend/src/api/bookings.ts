@@ -1,4 +1,4 @@
-import request from './request'
+import request from '@/utils/request'
 
 // 预约相关类型定义
 export interface BookingCreate {

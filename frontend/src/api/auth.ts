@@ -1,4 +1,4 @@
-import request from './request'
+import request from '@/utils/request'
 import type { LoginForm, RegisterForm, User } from '@/types'
 
 // 认证相关API

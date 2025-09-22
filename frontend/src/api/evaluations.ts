@@ -1,4 +1,4 @@
-import request from './request'
+import request from '@/utils/request'
 
 // 评价相关类型定义
 export interface EvaluationCreate {

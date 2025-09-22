@@ -1,4 +1,4 @@
-import request from './request'
+import request from '@/utils/request'
 
 // 教练学员关系相关类型定义
 export interface CoachStudentCreate {

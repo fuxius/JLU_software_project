@@ -253,7 +253,7 @@ class CompetitionService:
         
         # 检查支付状态
         if registration.payment:
-            if registration.payment.status != PaymentStatus.SUCCESS.value:
+            if registration.payment.status != str(PaymentStatus.SUCCESS):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="报名费尚未支付"
@@ -425,17 +425,17 @@ class CompetitionService:
         """获取比赛统计信息"""
         total_competitions = db.query(Competition).count()
         upcoming_competitions = db.query(Competition).filter(
-            Competition.status == CompetitionStatus.UPCOMING.value
+            Competition.status == str(CompetitionStatus.UPCOMING)
         ).count()
         ongoing_competitions = db.query(Competition).filter(
             Competition.status.in_([
-                CompetitionStatus.REGISTRATION.value,
-                CompetitionStatus.DRAW_COMPLETE.value,
-                CompetitionStatus.IN_PROGRESS.value
+                str(CompetitionStatus.REGISTRATION),
+                str(CompetitionStatus.DRAW_COMPLETE),
+                str(CompetitionStatus.IN_PROGRESS)
             ])
         ).count()
         completed_competitions = db.query(Competition).filter(
-            Competition.status == CompetitionStatus.COMPLETED.value
+            Competition.status == str(CompetitionStatus.COMPLETED)
         ).count()
         
         total_participants = db.query(CompetitionRegistration).filter(
