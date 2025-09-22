@@ -19,7 +19,7 @@ class BookingService:
     def create_booking(db: Session, booking_data: BookingCreate, current_user: User) -> Booking:
         """创建课程预约"""
         # 验证用户权限（只有学员可以预约）
-        if current_user.role != UserRole.STUDENT:
+        if str(current_user.role) != "STUDENT" and current_user.role != UserRole.STUDENT:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="只有学员可以创建预约"
@@ -169,14 +169,15 @@ class BookingService:
             )
         
         # 验证权限（教练可以确认自己的预约）
-        if current_user.role == UserRole.COACH:
+        user_role_str = str(current_user.role)
+        if user_role_str == "COACH" or current_user.role == UserRole.COACH:
             coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
             if not coach or booking.coach_id != coach.id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="只能确认自己的预约"
                 )
-        elif current_user.role not in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
+        elif user_role_str not in ["SUPER_ADMIN", "CAMPUS_ADMIN"] and current_user.role not in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="权限不足"
@@ -232,15 +233,16 @@ class BookingService:
         
         # 验证权限（学员和教练都可以取消）
         can_cancel = False
-        if current_user.role == UserRole.STUDENT:
+        user_role_str = str(current_user.role)
+        if user_role_str == "STUDENT" or current_user.role == UserRole.STUDENT:
             student = db.query(Student).filter(Student.user_id == current_user.id).first()
             if student and booking.student_id == student.id:
                 can_cancel = True
-        elif current_user.role == UserRole.COACH:
+        elif user_role_str == "COACH" or current_user.role == UserRole.COACH:
             coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
             if coach and booking.coach_id == coach.id:
                 can_cancel = True
-        elif current_user.role in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
+        elif user_role_str in ["SUPER_ADMIN", "CAMPUS_ADMIN"] or current_user.role in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
             can_cancel = True
         
         if not can_cancel:
@@ -314,18 +316,18 @@ class BookingService:
         query = db.query(Booking)
         
         # 根据用户角色过滤
-        if current_user.role == UserRole.STUDENT:
+        if str(current_user.role) == "STUDENT" or current_user.role == UserRole.STUDENT:
             student = db.query(Student).filter(Student.user_id == current_user.id).first()
             if student:
                 query = query.filter(Booking.student_id == student.id)
             else:
                 # 学员用户但暂未建立student扩展记录，返回空列表而不是403
                 return []
-        elif current_user.role == UserRole.COACH:
+        elif str(current_user.role) == "COACH" or current_user.role == UserRole.COACH:
             coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
             if coach:
                 query = query.filter(Booking.coach_id == coach.id)
-        elif current_user.role == UserRole.CAMPUS_ADMIN:
+        elif str(current_user.role) == "CAMPUS_ADMIN" or current_user.role == UserRole.CAMPUS_ADMIN:
             # 校区管理员只能看自己校区的预约
             query = query.filter(Booking.campus_id == current_user.campus_id)
         # SUPER_ADMIN 可以看所有预约
@@ -347,15 +349,16 @@ class BookingService:
         
         # 验证权限
         can_view = False
-        if current_user.role == UserRole.STUDENT:
+        user_role_str = str(current_user.role)
+        if user_role_str == "STUDENT" or current_user.role == UserRole.STUDENT:
             student = db.query(Student).filter(Student.user_id == current_user.id).first()
             if student and booking.student_id == student.id:
                 can_view = True
-        elif current_user.role == UserRole.COACH:
+        elif user_role_str == "COACH" or current_user.role == UserRole.COACH:
             coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
             if coach and booking.coach_id == coach.id:
                 can_view = True
-        elif current_user.role in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
+        elif user_role_str in ["SUPER_ADMIN", "CAMPUS_ADMIN"] or current_user.role in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
             can_view = True
         
         if not can_view:
