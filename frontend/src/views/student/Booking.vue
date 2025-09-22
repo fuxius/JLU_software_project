@@ -180,7 +180,7 @@ const submitBooking = async () => {
     try {
       // 获取当前用户信息
       const userStore = useUserStore()
-      if (!userStore.user || !userStore.user.campus_id) {
+      if (!userStore.user) {
         ElMessage.error('用户信息不完整，请重新登录')
         return
       }
@@ -189,7 +189,7 @@ const submitBooking = async () => {
       const bookingData = {
         coach_id: selectedCoach.value.id,
         student_id: userStore.user.id, // 添加student_id
-        campus_id: userStore.user.campus_id,
+        campus_id: userStore.user.campus_id || 1, // 如果没有campus_id，默认使用主校区
         start_time: bookingForm.start_time,
         end_time: bookingForm.end_time,
         duration_hours: duration,
