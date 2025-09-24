@@ -67,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { coachApi } from '@/api/coaches'
@@ -80,9 +80,34 @@ const searchForm = reactive({
   gender: ''
 })
 
-const coachList = ref<any[]>([])
+const allCoaches = ref<any[]>([])  // 存储所有教练数据
 const detailVisible = ref(false)
 const currentCoach = ref<any | null>(null)
+
+// 计算属性：根据搜索条件过滤教练列表
+const coachList = computed(() => {
+  let filtered = allCoaches.value
+
+  // 按姓名搜索
+  if (searchForm.name.trim()) {
+    const searchName = searchForm.name.toLowerCase()
+    filtered = filtered.filter(coach => {
+      const realName = coach.user?.real_name?.toLowerCase() || ''
+      const name = coach.name?.toLowerCase() || ''
+      return realName.includes(searchName) || name.includes(searchName)
+    })
+  }
+
+  // 按性别筛选
+  if (searchForm.gender) {
+    filtered = filtered.filter(coach => {
+      const gender = coach.user?.gender || 'male'
+      return gender === searchForm.gender
+    })
+  }
+
+  return filtered
+})
 
 const getLevelText = (level: string) => {
   const levelMap: Record<string, string> = {
@@ -104,27 +129,19 @@ const getLevelTagType = (level: string) => {
 
 const loadCoachList = async () => {
   try {
-    // 不限制校区，显示所有教练
+    // 不限制校区，显示所有教练，不传递搜索参数到后端
     const params: any = {}
     
-    // 添加搜索参数
-    if (searchForm.name) {
-      params.name = searchForm.name
-    }
-    if (searchForm.gender) {
-      params.gender = searchForm.gender
-    }
-
-    // 调用获取教练列表API
+    // 调用获取教练列表API（不进行服务端搜索）
     const response = await coachApi.getCoaches(params)
 
-    coachList.value = response
+    allCoaches.value = response.data || response
   } catch (error) {
     console.error('加载教练列表失败:', error)
     ElMessage.error('加载教练列表失败')
 
     // 如果API失败，使用静态数据作为后备
-    coachList.value = [
+    allCoaches.value = [
       {
         id: 1,
         name: '张教练',
@@ -158,12 +175,14 @@ const loadCoachList = async () => {
 }
 
 const handleSearch = () => {
-  loadCoachList()
+  // 搜索现在通过计算属性自动进行，不需要重新请求数据
+  // 可以在这里添加搜索统计或其他逻辑
+  console.log('搜索结果数量:', coachList.value.length)
 }
 
 const resetSearch = () => {
   Object.assign(searchForm, { name: '', gender: '' })
-  loadCoachList()
+  // 重置后计算属性会自动更新显示所有教练
 }
 
 const selectCoach = (coach: any) => {
