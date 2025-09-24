@@ -125,7 +125,8 @@ const handleLogin = async () => {
           router.push('/student/coaches')
           break
         default:
-          router.push('/dashboard')
+          // 如果角色未识别，跳转到登录页面
+          router.push('/login')
       }
     }
   } catch (error) {
@@ -163,7 +164,8 @@ const quickLogin = async () => {
           router.push('/student/coaches')
           break
         default:
-          router.push('/dashboard')
+          // 如果角色未识别，跳转到登录页面
+          router.push('/login')
       }
     }
   } catch (error) {

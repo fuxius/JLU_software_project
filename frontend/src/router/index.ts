@@ -6,7 +6,7 @@ import { ElMessage } from 'element-plus'
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/dashboard'
+    redirect: '/login'
   },
   {
     path: '/login',
@@ -24,15 +24,6 @@ const routes: RouteRecordRaw[] = [
     meta: { 
       title: '注册',
       requiresAuth: false 
-    }
-  },
-  {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: () => import('@/views/Dashboard.vue'),
-    meta: { 
-      title: '仪表板',
-      requiresAuth: true 
     }
   },
   {
@@ -220,9 +211,26 @@ router.beforeEach(async (to, from, next) => {
     // 检查角色权限
     if (to.meta?.roles) {
       const userRole = userStore.userRole
-      if (!userRole || !to.meta.roles.includes(userRole)) {
+      const allowedRoles = to.meta.roles as string[]
+      if (!userRole || !allowedRoles.includes(userRole)) {
         ElMessage.error('权限不足')
-        next('/dashboard')
+        // 根据用户角色跳转到对应首页
+        switch (userRole) {
+          case 'super_admin':
+            next('/admin/campus')
+            break
+          case 'campus_admin':
+            next('/admin/users')
+            break
+          case 'coach':
+            next('/coach/students')
+            break
+          case 'student':
+            next('/student/coaches')
+            break
+          default:
+            next('/login')
+        }
         return
       }
     }
@@ -230,7 +238,24 @@ router.beforeEach(async (to, from, next) => {
   
   // 如果已登录，不允许访问登录/注册页面
   if ((to.path === '/login' || to.path === '/register') && userStore.isLoggedIn) {
-    next('/dashboard')
+    // 根据用户角色跳转到对应首页
+    const userRole = userStore.userRole
+    switch (userRole) {
+      case 'super_admin':
+        next('/admin/campus')
+        break
+      case 'campus_admin':
+        next('/admin/users')
+        break
+      case 'coach':
+        next('/coach/students')
+        break
+      case 'student':
+        next('/student/coaches')
+        break
+      default:
+        next('/login')
+    }
     return
   }
   

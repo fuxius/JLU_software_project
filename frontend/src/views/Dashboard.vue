@@ -13,12 +13,7 @@
             class="sidebar-menu"
             @select="handleMenuSelect"
           >
-            <!-- 通用菜单 -->
-            <el-menu-item index="/dashboard">
-              <el-icon><House /></el-icon>
-              <span>仪表板</span>
-            </el-menu-item>
-            
+            <!-- 通用菜单 -->            
             <el-menu-item index="/profile">
               <el-icon><User /></el-icon>
               <span>个人信息</span>
