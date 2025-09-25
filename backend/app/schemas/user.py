@@ -33,6 +33,27 @@ class UserRegister(UserBase):
         
         return v
 
+
+class AdminRegister(UserRegister):
+    """管理员注册Schema"""
+    role: UserRole
+
+    @validator('role', pre=True)
+    def validate_role(cls, v):
+        if isinstance(v, str):
+            v = v.strip().upper()
+        mapping = {
+            'SUPER_ADMIN': UserRole.SUPER_ADMIN,
+            'CAMPUS_ADMIN': UserRole.CAMPUS_ADMIN,
+            UserRole.SUPER_ADMIN: UserRole.SUPER_ADMIN,
+            UserRole.CAMPUS_ADMIN: UserRole.CAMPUS_ADMIN,
+        }
+        if v in mapping:
+            return mapping[v]
+        if isinstance(v, UserRole) and v in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
+            return v
+        raise ValueError('管理员注册仅支持超级管理员或校区管理员角色')
+
 class UserCreate(UserBase):
     """用户创建Schema"""
     password: str
@@ -50,6 +71,20 @@ class UserCreate(UserBase):
         if not (has_letter and has_digit and has_special):
             raise ValueError('密码必须包含字母、数字和特殊字符')
         
+        return v
+
+    @validator('role', pre=True)
+    def normalize_role(cls, v):
+        if isinstance(v, str):
+            v = v.strip().upper()
+            mapping = {
+                'SUPER_ADMIN': UserRole.SUPER_ADMIN,
+                'CAMPUS_ADMIN': UserRole.CAMPUS_ADMIN,
+                'COACH': UserRole.COACH,
+                'STUDENT': UserRole.STUDENT,
+            }
+            if v in mapping:
+                return mapping[v]
         return v
 
 class UserUpdate(BaseModel):

@@ -28,6 +28,9 @@ class UserService:
                 detail="手机号已被注册"
             )
         
+        # 统一角色值
+        role = UserService._normalize_role(user_data.role)
+
         # 创建用户
         hashed_password = get_password_hash(user_data.password)
         db_user = User(
@@ -38,7 +41,7 @@ class UserService:
             age=user_data.age,
             phone=user_data.phone,
             email=user_data.email,
-            role=user_data.role,
+            role=role,
             campus_id=user_data.campus_id,
             avatar_url=user_data.avatar_url,
             id_number=user_data.id_number
@@ -49,11 +52,11 @@ class UserService:
         db.refresh(db_user)
         
         # 根据角色创建对应的扩展记录
-        if user_data.role == UserRole.STUDENT:
+        if role == UserRole.STUDENT:
             student = Student(user_id=db_user.id)
             db.add(student)
             db.commit()
-        elif user_data.role == UserRole.COACH:
+        elif role == UserRole.COACH:
             # 教练需要审核，先创建待审核状态
             coach = Coach(
                 user_id=db_user.id,
@@ -74,6 +77,49 @@ class UserService:
         )
         
         return db_user
+
+    @staticmethod
+    def create_admin_user(db: Session, user_data: UserCreate, current_user: Optional[User] = None) -> User:
+        """创建管理员用户（仅限超级管理员调用）"""
+        role = UserService._normalize_role(user_data.role)
+
+        if role not in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="管理员注册仅支持超级管理员或校区管理员角色"
+            )
+
+        # 检查权限
+        if current_user and current_user.role != UserRole.SUPER_ADMIN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="只有超级管理员可以创建管理员账户"
+            )
+
+        normalized_data = UserCreate(**{**user_data.dict(), "role": role})
+        return UserService.create_user(db, normalized_data)
+
+    @staticmethod
+    def _normalize_role(role_value) -> UserRole:
+        """将输入角色转换为UserRole枚举，忽略大小写并支持字符串"""
+        if isinstance(role_value, UserRole):
+            return role_value
+
+        if isinstance(role_value, str):
+            role_str = role_value.strip().upper()
+            if role_str == "SUPER_ADMIN":
+                return UserRole.SUPER_ADMIN
+            if role_str == "CAMPUS_ADMIN":
+                return UserRole.CAMPUS_ADMIN
+            if role_str == "COACH":
+                return UserRole.COACH
+            if role_str == "STUDENT":
+                return UserRole.STUDENT
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无效的用户角色"
+        )
     
     @staticmethod
     def authenticate_user(db: Session, login_data: UserLogin) -> Optional[User]:
