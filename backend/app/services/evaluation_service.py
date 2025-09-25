@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 from ..models.evaluation import Evaluation
 from ..models.user import User
@@ -14,13 +14,13 @@ class EvaluationService:
     """评价服务"""
     
     @staticmethod
-    def create_evaluation(db: Session, evaluation_data: EvaluationCreate, current_user: User) -> Evaluation:
+    def create_evaluation(db: Session, evaluation_data: EvaluationCreate) -> Evaluation:
         """创建课后评价"""
         # 不进行任何权限或状态检查，允许直接创建评价
         evaluation = Evaluation(
             course_id=evaluation_data.course_id,
-            evaluator_id=current_user.id,
-            evaluator_type=str(current_user.role).lower(),
+            evaluator_id=getattr(evaluation_data, 'evaluator_id', 1),  # 默认评价人ID
+            evaluator_type=getattr(evaluation_data, 'evaluator_type', 'student'),
             content=evaluation_data.content,
             rating=evaluation_data.rating
         )
@@ -29,21 +29,14 @@ class EvaluationService:
         db.commit()
         db.refresh(evaluation)
         
-        # 记录日志
-        SystemLogService.log_action(
-            db, current_user.id, "CREATE_EVALUATION",
-            f"创建课程评价: 课程ID {evaluation_data.course_id}"
-        )
-        
         return evaluation
     
     @staticmethod
     def get_evaluations(
-        db: Session, 
-        current_user: User, 
+        db: Session,
         course_id: Optional[int] = None,
         evaluator_type: Optional[str] = None,
-        skip: int = 0, 
+        skip: int = 0,
         limit: int = 100
     ) -> List[Evaluation]:
         """获取评价列表"""
@@ -59,7 +52,7 @@ class EvaluationService:
         return query.order_by(Evaluation.created_at.desc()).offset(skip).limit(limit).all()
     
     @staticmethod
-    def get_evaluation_by_id(db: Session, evaluation_id: int, current_user: User) -> Evaluation:
+    def get_evaluation_by_id(db: Session, evaluation_id: int) -> Evaluation:
         """获取评价详情"""
         evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
         
@@ -75,8 +68,7 @@ class EvaluationService:
     def update_evaluation(
         db: Session, 
         evaluation_id: int, 
-        evaluation_data: EvaluationUpdate, 
-        current_user: User
+        evaluation_data: EvaluationUpdate
     ) -> Evaluation:
         """更新评价"""
         evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
@@ -98,16 +90,12 @@ class EvaluationService:
         db.commit()
         db.refresh(evaluation)
         
-        # 记录日志
-        SystemLogService.log_action(
-            db, current_user.id, "UPDATE_EVALUATION",
-            f"更新课程评价: 评价ID {evaluation_id}"
-        )
+        # 已删除日志记录功能
         
         return evaluation
     
     @staticmethod
-    def delete_evaluation(db: Session, evaluation_id: int, current_user: User) -> bool:
+    def delete_evaluation(db: Session, evaluation_id: int) -> bool:
         """删除评价"""
         evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
         
@@ -120,23 +108,19 @@ class EvaluationService:
         db.delete(evaluation)
         db.commit()
         
-        # 记录日志
-        SystemLogService.log_action(
-            db, current_user.id, "DELETE_EVALUATION",
-            f"删除课程评价: 评价ID {evaluation_id}"
-        )
+        # 已删除日志记录功能
         
         return True
     
     @staticmethod
-    def get_course_evaluations(db: Session, course_id: int, current_user: User) -> List[Evaluation]:
+    def get_course_evaluations(db: Session, course_id: int) -> List[Evaluation]:
         """获取课程的所有评价"""
         return db.query(Evaluation).filter(
             Evaluation.course_id == course_id
         ).order_by(Evaluation.created_at.desc()).all()
     
     @staticmethod
-    def get_pending_evaluations(db: Session, current_user: User) -> List[Dict[str, Any]]:
+    def get_pending_evaluations(db: Session) -> List[Dict[str, Any]]:
         """获取待评价课程"""
         # 简化实现，直接返回空列表避免复杂的JOIN
         return []
