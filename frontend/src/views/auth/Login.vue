@@ -45,17 +45,6 @@
             {{ loading ? '登录中...' : '登录' }}
           </el-button>
         </el-form-item>
-
-        <el-form-item>
-          <el-button
-            type="success"
-            size="large"
-            style="width: 100%"
-            @click="quickLogin"
-          >
-            快速测试登录
-          </el-button>
-        </el-form-item>
         
         <div class="login-footer">
           <router-link to="/register" class="register-link">
@@ -83,8 +72,8 @@ const loading = ref(false)
 
 // 表单数据
 const loginForm = reactive<LoginForm>({
-  username: 'lxy',
-  password: 'lxy123!!'
+  username: '',
+  password: ''
 })
 
 // 表单验证规则
@@ -131,45 +120,6 @@ const handleLogin = async () => {
     }
   } catch (error) {
     console.error('登录失败:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-// 快速测试登录
-const quickLogin = async () => {
-  try {
-    loading.value = true
-
-    // 设置测试账户信息
-    loginForm.username = 'lxy'
-    loginForm.password = 'lxy123!!'
-
-    const result = await userStore.login(loginForm)
-
-    if (result.success) {
-      // 根据用户角色跳转到不同页面
-      const role = userStore.userRole
-      switch (role) {
-        case 'super_admin':
-          router.push('/admin/campus')
-          break
-        case 'campus_admin':
-          router.push('/admin/users')
-          break
-        case 'coach':
-          router.push('/coach/students')
-          break
-        case 'student':
-          router.push('/student/coaches')
-          break
-        default:
-          // 如果角色未识别，跳转到登录页面
-          router.push('/login')
-      }
-    }
-  } catch (error) {
-    console.error('快速登录失败:', error)
   } finally {
     loading.value = false
   }
