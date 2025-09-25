@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from ...db.database import get_db
 from ...core.deps import get_current_user
-from ...models.user import User, UserRole
+from ...models.user import User
 from ...schemas.evaluation import (
     EvaluationCreate, EvaluationUpdate, EvaluationResponse
 )
@@ -40,8 +40,7 @@ def get_evaluations(
     """
     获取评价列表
     
-    - 用户只能看到自己相关的评价
-    - 管理员可以看到所有评价
+    - 不再进行权限限制，返回所有符合条件的评价
     """
     evaluations = EvaluationService.get_evaluations(
         db, current_user, course_id, evaluator_type, skip, limit
@@ -68,8 +67,7 @@ def update_evaluation(
     """
     更新评价
     
-    - 只有评价创建者可以更新
-    - 评价创建后24小时内可以修改
+    - 不再限制评价创建者或时间
     """
     evaluation = EvaluationService.update_evaluation(
         db, evaluation_id, evaluation_data, current_user
@@ -82,7 +80,7 @@ def delete_evaluation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """删除评价（只有创建者或管理员可以删除）"""
+    """删除评价"""
     success = EvaluationService.delete_evaluation(db, evaluation_id, current_user)
     if success:
         return {"message": "评价删除成功"}
