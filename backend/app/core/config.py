@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # 应用配置
     APP_NAME: str = "乒乓球培训管理系统"
     APP_VERSION: str = "1.0.0"
-    DEBUG: bool = config("DEBUG", default=False, cast=bool)
+    DEBUG: bool = config("DEBUG", default=True, cast=bool)
     
     # 支付配置
     WECHAT_PAY_APP_ID: str = config("WECHAT_PAY_APP_ID", default="")

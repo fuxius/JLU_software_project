@@ -3,21 +3,14 @@ from typing import Optional, List
 from ..models.campus import Campus
 from ..models.user import User, UserRole
 from ..schemas.campus import CampusCreate, CampusUpdate
-from ..services.system_log_service import SystemLogService
 from fastapi import HTTPException, status
 
 class CampusService:
     """校区服务"""
     
     @staticmethod
-    def create_campus(db: Session, campus_data: CampusCreate, current_user: User) -> Campus:
+    def create_campus(db: Session, campus_data: CampusCreate) -> Campus:
         """创建校区"""
-        if current_user.role != UserRole.SUPER_ADMIN:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="只有超级管理员可以创建校区"
-            )
-        
         # 检查校区名称是否已存在
         if db.query(Campus).filter(Campus.name == campus_data.name).first():
             raise HTTPException(
@@ -36,16 +29,6 @@ class CampusService:
         db.commit()
         db.refresh(db_campus)
         
-        # 记录系统日志
-        SystemLogService.log_action(
-            db=db,
-            user_id=current_user.id,
-            action="campus_create",
-            target_type="campus",
-            target_id=db_campus.id,
-            description=f"创建校区: {db_campus.name}"
-        )
-        
         return db_campus
     
     @staticmethod
@@ -59,6 +42,29 @@ class CampusService:
         return db.query(Campus).filter(Campus.is_active == 1).offset(skip).limit(limit).all()
     
     @staticmethod
+    def get_campuses_list(
+        db: Session, 
+        skip: int = 0, 
+        limit: int = 100,
+        name: Optional[str] = None
+    ) -> tuple[List[Campus], int]:
+        """获取校区列表，支持搜索和分页"""
+        
+        query = db.query(Campus).filter(Campus.is_active == 1)
+        
+        # 搜索条件
+        if name:
+            query = query.filter(Campus.name.like(f"%{name}%"))
+        
+        # 获取总数
+        total = query.count()
+        
+        # 分页
+        campuses = query.offset(skip).limit(limit).all()
+        
+        return campuses, total
+    
+    @staticmethod
     def get_main_campus(db: Session) -> Optional[Campus]:
         """获取中心校区"""
         return db.query(Campus).filter(
@@ -67,14 +73,8 @@ class CampusService:
         ).first()
     
     @staticmethod
-    def update_campus(db: Session, campus_id: int, campus_data: CampusUpdate, current_user: User) -> Campus:
+    def update_campus(db: Session, campus_id: int, campus_data: CampusUpdate) -> Campus:
         """更新校区信息"""
-        if current_user.role != UserRole.SUPER_ADMIN:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="只有超级管理员可以更新校区信息"
-            )
-        
         campus = db.query(Campus).filter(Campus.id == campus_id).first()
         if not campus:
             raise HTTPException(
@@ -95,32 +95,23 @@ class CampusService:
         db.commit()
         db.refresh(campus)
         
-        # 记录系统日志
-        SystemLogService.log_action(
-            db=db,
-            user_id=current_user.id,
-            action="campus_update",
-            target_type="campus",
-            target_id=campus_id,
-            description=f"更新校区信息: {campus.name}"
-        )
-        
         return campus
     
     @staticmethod
-    def delete_campus(db: Session, campus_id: int, current_user: User) -> bool:
+    def delete_campus(db: Session, campus_id: int) -> bool:
         """删除校区(软删除)"""
-        if current_user.role != UserRole.SUPER_ADMIN:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="只有超级管理员可以删除校区"
-            )
-        
         campus = db.query(Campus).filter(Campus.id == campus_id).first()
         if not campus:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="校区不存在"
+            )
+        
+        # 检查是否为主校区
+        if campus.is_main_campus:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="主校区不能删除"
             )
         
         # 检查是否有用户关联到此校区
@@ -134,27 +125,11 @@ class CampusService:
         campus.is_active = 0
         db.commit()
         
-        # 记录系统日志
-        SystemLogService.log_action(
-            db=db,
-            user_id=current_user.id,
-            action="campus_delete",
-            target_type="campus",
-            target_id=campus_id,
-            description=f"删除校区: {campus.name}"
-        )
-        
         return True
     
     @staticmethod
-    def assign_admin(db: Session, campus_id: int, admin_id: int, current_user: User) -> Campus:
+    def assign_admin(db: Session, campus_id: int, admin_id: int) -> Campus:
         """指定校区管理员"""
-        if current_user.role != UserRole.SUPER_ADMIN:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="只有超级管理员可以指定校区管理员"
-            )
-        
         campus = db.query(Campus).filter(Campus.id == campus_id).first()
         if not campus:
             raise HTTPException(
@@ -178,15 +153,5 @@ class CampusService:
         
         db.commit()
         db.refresh(campus)
-        
-        # 记录系统日志
-        SystemLogService.log_action(
-            db=db,
-            user_id=current_user.id,
-            action="campus_assign_admin",
-            target_type="campus",
-            target_id=campus_id,
-            description=f"为校区 {campus.name} 指定管理员: {admin_user.real_name}"
-        )
         
         return campus

@@ -57,6 +57,12 @@
         </el-table-column>
         <el-table-column prop="phone" label="手机号" />
         <el-table-column prop="email" label="邮箱" />
+        <el-table-column prop="gender" label="性别" width="80">
+          <template #default="scope">
+            <span>{{ scope.row.gender === 'male' ? '男' : scope.row.gender === 'female' ? '女' : '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="age" label="年龄" width="80" />
         <el-table-column prop="is_active" label="状态">
           <template #default="scope">
             <el-tag :type="scope.row.is_active ? 'success' : 'danger'">
@@ -146,8 +152,8 @@
         
         <el-form-item label="性别" prop="gender">
           <el-radio-group v-model="userForm.gender">
-            <el-radio value="male">男</el-radio>
-            <el-radio value="female">女</el-radio>
+            <el-radio label="male">男</el-radio>
+            <el-radio label="female">女</el-radio>
           </el-radio-group>
         </el-form-item>
         
@@ -171,6 +177,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, FormInstance } from 'element-plus'
+import { usersApi } from '../../api/users'
+import type { User } from '../../types'
 
 const userFormRef = ref<FormInstance>()
 const loading = ref(false)
@@ -183,7 +191,16 @@ const searchForm = reactive({
   role: ''
 })
 
-const userForm = reactive({
+const userForm = reactive<{
+  id: number | null
+  username: string
+  real_name: string
+  role: string
+  phone: string
+  email: string
+  gender: string
+  age: number
+}>({
   id: null,
   username: '',
   real_name: '',
@@ -200,7 +217,7 @@ const pagination = reactive({
   total: 0
 })
 
-const userList = ref([])
+const userList = ref<User[]>([])
 
 const userRules = {
   real_name: [
@@ -241,44 +258,19 @@ const getRoleTagType = (role: string) => {
 const loadUserList = async () => {
   loading.value = true
   try {
-    // TODO: 调用获取用户列表API
-    console.log('加载用户列表', { 
-      page: pagination.page, 
-      size: pagination.size,
-      ...searchForm 
+    const response = await usersApi.getUsersList({
+      skip: (pagination.page - 1) * pagination.size,
+      limit: pagination.size,
+      username: searchForm.username || undefined,
+      real_name: searchForm.realName || undefined,
+      role: searchForm.role || undefined
     })
     
-    // 模拟数据
-    userList.value = [
-      {
-        id: 1,
-        username: 'admin',
-        real_name: '系统管理员',
-        role: 'super_admin',
-        phone: '13800138000',
-        email: 'admin@example.com',
-        gender: 'male',
-        age: 30,
-        is_active: true,
-        created_at: '2024-01-01 12:00:00'
-      },
-      {
-        id: 2,
-        username: 'teacher1',
-        real_name: '张教练',
-        role: 'coach',
-        phone: '13800138001',
-        email: 'teacher1@example.com',
-        gender: 'male',
-        age: 28,
-        is_active: true,
-        created_at: '2024-01-02 12:00:00'
-      }
-    ]
-    pagination.total = 2
-  } catch (error) {
+    userList.value = response.items
+    pagination.total = response.total
+  } catch (error: any) {
     console.error('加载用户列表失败:', error)
-    ElMessage.error('加载用户列表失败')
+    ElMessage.error(error?.response?.data?.detail || '加载用户列表失败')
   } finally {
     loading.value = false
   }
@@ -298,8 +290,17 @@ const resetSearch = () => {
   handleSearch()
 }
 
-const showEditDialog = (row: any) => {
-  Object.assign(userForm, row)
+const showEditDialog = (row: User) => {
+  Object.assign(userForm, {
+    id: row.id,
+    username: row.username,
+    real_name: row.real_name,
+    role: row.role,
+    phone: row.phone,
+    email: row.email || '',
+    gender: row.gender || 'male',
+    age: row.age || 18
+  })
   dialogVisible.value = true
 }
 
@@ -320,27 +321,33 @@ const resetForm = () => {
 }
 
 const handleSave = async () => {
-  if (!userFormRef.value) return
+  if (!userFormRef.value || !userForm.id) return
   
   try {
     await userFormRef.value.validate()
     saving.value = true
     
-    // TODO: 调用更新用户API
-    console.log('更新用户:', userForm)
+    await usersApi.updateUser(userForm.id, {
+      real_name: userForm.real_name,
+      role: userForm.role,
+      phone: userForm.phone,
+      email: userForm.email,
+      gender: userForm.gender,
+      age: userForm.age
+    })
     
     ElMessage.success('更新成功')
     dialogVisible.value = false
     loadUserList()
-  } catch (error) {
+  } catch (error: any) {
     console.error('更新失败:', error)
-    ElMessage.error('更新失败')
+    ElMessage.error(error?.response?.data?.detail || '更新失败')
   } finally {
     saving.value = false
   }
 }
 
-const toggleUserStatus = async (row: any) => {
+const toggleUserStatus = async (row: User) => {
   const action = row.is_active ? '禁用' : '启用'
   try {
     await ElMessageBox.confirm(`确定要${action}用户 ${row.username} 吗？`, '提示', {
@@ -349,17 +356,19 @@ const toggleUserStatus = async (row: any) => {
       type: 'warning'
     })
     
-    // TODO: 调用切换用户状态API
-    console.log(`${action}用户:`, row.id)
+    await usersApi.toggleUserStatus(row.id)
     
     ElMessage.success(`${action}成功`)
     loadUserList()
-  } catch (error) {
-    // 用户取消操作
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error(`${action}用户失败:`, error)
+      ElMessage.error(error?.response?.data?.detail || `${action}用户失败`)
+    }
   }
 }
 
-const resetPassword = async (row: any) => {
+const resetPassword = async (row: User) => {
   try {
     await ElMessageBox.confirm(`确定要重置用户 ${row.username} 的密码吗？`, '提示', {
       confirmButtonText: '确定',
@@ -367,12 +376,23 @@ const resetPassword = async (row: any) => {
       type: 'warning'
     })
     
-    // TODO: 调用重置密码API
-    console.log('重置密码:', row.id)
+    const response = await usersApi.resetUserPassword(row.id)
     
-    ElMessage.success('密码重置成功，新密码已发送到用户邮箱')
-  } catch (error) {
-    // 用户取消操作
+    // 显示新密码给管理员
+    const newPassword = response.data?.new_password
+    if (newPassword) {
+      await ElMessageBox.alert(`密码重置成功！新密码是：${newPassword}`, '密码重置成功', {
+        confirmButtonText: '确定',
+        type: 'success'
+      })
+    } else {
+      ElMessage.success('密码重置成功')
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('重置密码失败:', error)
+      ElMessage.error(error?.response?.data?.detail || '重置密码失败')
+    }
   }
 }
 

@@ -1,10 +1,14 @@
-import request from '@/utils/request'
-import type { Campus } from '@/types'
+import request from '../utils/request'
+import type { Campus } from '../types'
 
 // 校区相关API
 export const campusApi = {
-  // 获取所有校区
-  getCampuses: (params?: { skip?: number; limit?: number }) => {
+  // 获取校区列表
+  getCampuses: (params?: { 
+    skip?: number
+    limit?: number 
+    name?: string 
+  }) => {
     return request.get('/campus', { params })
   },
 
@@ -19,12 +23,26 @@ export const campusApi = {
   },
 
   // 创建校区
-  createCampus: (data: Partial<Campus>) => {
+  createCampus: (data: {
+    name: string
+    address: string
+    contact_person: string
+    contact_phone: string
+    contact_email?: string
+    is_main_campus?: boolean
+  }) => {
     return request.post('/campus', data)
   },
 
   // 更新校区
-  updateCampus: (id: number, data: Partial<Campus>) => {
+  updateCampus: (id: number, data: {
+    name?: string
+    address?: string
+    contact_person?: string
+    contact_phone?: string
+    contact_email?: string
+    is_main_campus?: boolean
+  }) => {
     return request.put(`/campus/${id}`, data)
   },
 

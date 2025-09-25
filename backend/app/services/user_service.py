@@ -149,6 +149,36 @@ class UserService:
         return db.query(User).filter(User.campus_id == campus_id).offset(skip).limit(limit).all()
     
     @staticmethod
+    def get_users_list(
+        db: Session, 
+        skip: int = 0, 
+        limit: int = 100,
+        username: Optional[str] = None,
+        real_name: Optional[str] = None,
+        role: Optional[str] = None,
+        current_user: User = None
+    ) -> tuple[List[User], int]:
+        """获取用户列表，支持搜索和分页"""
+        
+        query = db.query(User)
+        
+        # 搜索条件
+        if username:
+            query = query.filter(User.username.like(f"%{username}%"))
+        if real_name:
+            query = query.filter(User.real_name.like(f"%{real_name}%"))
+        if role:
+            query = query.filter(User.role == role)
+        
+        # 获取总数
+        total = query.count()
+        
+        # 分页
+        users = query.offset(skip).limit(limit).all()
+        
+        return users, total
+    
+    @staticmethod
     def update_user(db: Session, user_id: int, user_data: UserUpdate, current_user: User) -> User:
         """更新用户信息"""
         user = db.query(User).filter(User.id == user_id).first()
@@ -156,13 +186,6 @@ class UserService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="用户不存在"
-            )
-        
-        # 检查权限
-        if current_user.id != user_id and current_user.role not in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="权限不足"
             )
         
         # 更新字段
@@ -244,3 +267,61 @@ class UserService:
         )
         
         return True
+
+    @staticmethod
+    def toggle_user_status(db: Session, user_id: int, current_user: User) -> bool:
+        """切换用户状态"""
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="用户不存在"
+            )
+        
+        # 切换状态
+        user.is_active = 1 if user.is_active == 0 else 0
+        db.commit()
+        
+        # 记录系统日志
+        action = "user_activate" if user.is_active else "user_deactivate"
+        status_text = "启用" if user.is_active else "禁用"
+        SystemLogService.log_action(
+            db=db,
+            user_id=current_user.id,
+            action=action,
+            target_type="user",
+            target_id=user_id,
+            description=f"{status_text}用户: {user.username}"
+        )
+        
+        return True
+
+    @staticmethod
+    def reset_user_password(db: Session, user_id: int, current_user: User) -> str:
+        """重置用户密码"""
+        import random
+        import string
+        
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="用户不存在"
+            )
+        
+        # 生成随机密码
+        new_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        user.password_hash = get_password_hash(new_password)
+        db.commit()
+        
+        # 记录系统日志
+        SystemLogService.log_action(
+            db=db,
+            user_id=current_user.id,
+            action="password_reset",
+            target_type="user",
+            target_id=user_id,
+            description=f"重置用户密码: {user.username}"
+        )
+        
+        return new_password

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from ...db.database import get_db
 from ...schemas.user import UserResponse, UserUpdate, PasswordChange
@@ -9,6 +9,35 @@ from ...core.deps import get_current_user, get_admin
 from ...models.user import User
 
 router = APIRouter()
+
+@router.get("/", summary="获取用户列表")
+def get_users_list(
+    skip: int = Query(0, ge=0, description="跳过的记录数"),
+    limit: int = Query(10, ge=1, le=100, description="每页记录数"),
+    username: Optional[str] = Query(None, description="用户名搜索"),
+    real_name: Optional[str] = Query(None, description="真实姓名搜索"),
+    role: Optional[str] = Query(None, description="角色筛选"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """获取用户列表"""
+    users, total = UserService.get_users_list(
+        db=db,
+        skip=skip,
+        limit=limit,
+        username=username,
+        real_name=real_name,
+        role=role,
+        current_user=current_user
+    )
+    
+    return {
+        "items": [UserResponse.from_orm(user).dict() for user in users],
+        "total": total,
+        "page": (skip // limit) + 1,
+        "size": limit,
+        "pages": (total + limit - 1) // limit
+    }
 
 @router.get("/me", response_model=UserResponse, summary="获取当前用户信息")
 def get_current_user_info(
@@ -64,7 +93,7 @@ def get_campus_users(
 def get_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin)
+    current_user: User = Depends(get_current_user)
 ):
     """获取用户信息"""
     user = UserService.get_user_by_id(db, user_id)
@@ -80,7 +109,7 @@ def update_user(
     user_id: int,
     user_data: UserUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin)
+    current_user: User = Depends(get_current_user)
 ):
     """更新用户信息"""
     user = UserService.update_user(db, user_id, user_data, current_user)
@@ -90,7 +119,7 @@ def update_user(
 def deactivate_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_admin)
+    current_user: User = Depends(get_current_user)
 ):
     """停用用户"""
     success = UserService.deactivate_user(db, user_id, current_user)
@@ -101,3 +130,31 @@ def deactivate_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="停用用户失败"
         )
+
+@router.patch("/{user_id}/toggle-status", summary="切换用户状态")
+def toggle_user_status(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """切换用户状态（启用/禁用）"""
+    success = UserService.toggle_user_status(db, user_id, current_user)
+    if success:
+        user = UserService.get_user_by_id(db, user_id)
+        status_text = "启用" if user.is_active else "禁用"
+        return {"message": f"用户已{status_text}"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="切换用户状态失败"
+        )
+
+@router.post("/{user_id}/reset-password", summary="重置用户密码")
+def reset_user_password(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """重置用户密码"""
+    new_password = UserService.reset_user_password(db, user_id, current_user)
+    return {"message": "密码重置成功", "new_password": new_password}
