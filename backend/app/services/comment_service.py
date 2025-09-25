@@ -199,6 +199,111 @@ class CommentService:
                    .limit(limit)
                    .all())
         
+        # 构造返回结果
+        result = []
+        for comment in comments:
+            comment_info = {
+                "id": comment.id,
+                "booking_id": comment.booking_id,
+                "rating": comment.rating,
+                "content": comment.content,
+                "created_at": comment.created_at,
+                "updated_at": comment.updated_at,
+                "coach_name": comment.booking.coach.user.real_name if comment.booking.coach and comment.booking.coach.user else None,
+                "student_name": comment.booking.student.user.real_name if comment.booking.student and comment.booking.student.user else None,
+                "booking_start_time": comment.booking.start_time,
+                "booking_end_time": comment.booking.end_time,
+                "booking_status": comment.booking.status
+            }
+            result.append(comment_info)
+        
+        return result
+
+    @staticmethod
+    def get_coach_comment_stats(db: Session, coach_id: int, current_user: User) -> CoachCommentStats:
+        """获取教练的评价统计信息"""
+        # 检查权限
+        if current_user.role == UserRole.COACH:
+            coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
+            if not coach or coach_id != coach.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="只能查看自己的评价统计"
+                )
+
+        # 检查教练是否存在
+        coach = db.query(Coach).filter(Coach.id == coach_id).first()
+        if not coach:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="教练不存在"
+            )
+
+        # 获取所有评价的基本信息
+        base_query = (db.query(Comment)
+                    .join(Booking, Comment.booking_id == Booking.id)
+                    .filter(Booking.coach_id == coach_id))
+        
+        # 计算总评价数和平均评分
+        total_comments = base_query.count()
+        
+        if total_comments == 0:
+            # 如果没有评价，返回空统计
+            return {
+                "coach_id": coach_id,
+                "coach_name": coach.user.real_name,
+                "total_comments": 0,
+                "average_rating": 0.0,
+                "rating_distribution": {},
+                "recent_comments": []
+            }
+        
+        average_rating = (db.query(func.avg(Comment.rating))
+                        .select_from(Comment)
+                        .join(Booking, Comment.booking_id == Booking.id)
+                        .filter(Booking.coach_id == coach_id)
+                        .scalar() or 0.0)
+        
+        # 计算评分分布（包含所有分数，即使是0）
+        rating_distribution = {}
+        for rating in range(1, 6):  # 1-5分
+            count = (base_query.filter(Comment.rating == rating).count())
+            rating_distribution[str(rating)] = count  # 包含所有评分，即使计数为0
+        
+        # 获取最近的10条评价
+        recent_comments = (base_query
+                        .order_by(Comment.created_at.desc())
+                        .limit(10)
+                        .all())
+        
+        # 构建评价统计数据
+        def format_datetime(dt):
+            if dt is None:
+                return None
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        result = {
+            "coach_id": coach_id,
+            "coach_name": coach.user.real_name,
+            "total_comments": total_comments,
+            "average_rating": float(average_rating),
+            "rating_distribution": rating_distribution,
+            "recent_comments": [{
+                "id": comment.id,
+                "booking_id": comment.booking_id,
+                "rating": comment.rating,
+                "content": comment.content,
+                "created_at": format_datetime(comment.created_at),
+                "updated_at": format_datetime(comment.updated_at),
+                "booking_start_time": format_datetime(comment.booking.start_time),
+                "booking_end_time": format_datetime(comment.booking.end_time),
+                "booking_status": comment.booking.status,
+                "student_name": comment.booking.student.user.real_name if comment.booking.student and comment.booking.student.user else None
+            } for comment in recent_comments]
+        }
+        
+        return result
+        
         # 构造包含预约信息的响应
         result = []
         for comment in comments:

@@ -227,15 +227,26 @@ def get_comment_by_booking(
     # 检查预约是否存在
     from ...models.booking import Booking
     from ...models.comment import Comment
-    booking = db.query(Booking).filter(Booking.id == booking_id).first()
-    if not booking:
+    from ...models.student import Student
+    
+    # 联合查询 booking 和 student 表，获取对应的 user_id
+    booking_with_user = (
+        db.query(Booking, Student.user_id)
+        .join(Student, Booking.student_id == Student.id)
+        .filter(Booking.id == booking_id)
+        .first()
+    )
+    
+    if not booking_with_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="预约不存在"
         )
     
-    # 检查权限
-    if current_user.role == UserRole.STUDENT and booking.student_id != current_user.id:
+    booking, student_user_id = booking_with_user
+    
+    # 检查权限（学生：比较 user_id）
+    if current_user.role == UserRole.STUDENT and student_user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="没有权限查看此预约的评论"
