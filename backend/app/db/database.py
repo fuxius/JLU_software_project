@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from decouple import config
 
-DATABASE_URL = config("DATABASE_URL", default="sqlite:///./tabletennis.db")
+DATABASE_URL = config("DATABASE_URL", default="sqlite:///../tabletennis.db")
 
 # SQLite特殊配置
 connect_args = {}

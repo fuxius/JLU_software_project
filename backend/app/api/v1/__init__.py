@@ -12,6 +12,7 @@ from .system_logs import router as system_logs_router
 from .competitions import router as competitions_router
 from .notifications import router as notifications_router
 from .licenses import router as licenses_router
+from .comments import router as comments_router
 
 api_router = APIRouter()
 
@@ -29,3 +30,4 @@ api_router.include_router(system_logs_router, prefix="/system-logs", tags=["系�
 api_router.include_router(competitions_router, prefix="/competitions", tags=["比赛管理"])
 api_router.include_router(notifications_router, prefix="/notifications", tags=["通知管理"])
 api_router.include_router(licenses_router, prefix="/licenses", tags=["软件授权"])
+api_router.include_router(comments_router, prefix="/comments", tags=["评论管理"])

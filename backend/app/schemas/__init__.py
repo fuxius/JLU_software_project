@@ -7,6 +7,7 @@ from .payment import RechargeRequest, PaymentResponse, BalanceResponse, PaymentS
 from .evaluation import EvaluationCreate, EvaluationResponse
 from .competition import CompetitionCreate, CompetitionResponse, CompetitionRegistrationCreate
 from .system_log import SystemLogResponse
+from .comment import CommentCreate, CommentUpdate, CommentResponse, CommentWithBookingInfo, CoachCommentStats, StudentCommentStats
 
 __all__ = [
     "UserCreate", "UserUpdate", "UserResponse", "UserLogin", "Token",
@@ -17,5 +18,6 @@ __all__ = [
     "RechargeRequest", "PaymentResponse", "BalanceResponse", "PaymentSummary",
     "EvaluationCreate", "EvaluationResponse",
     "CompetitionCreate", "CompetitionResponse", "CompetitionRegistrationCreate",
-    "SystemLogResponse"
+    "SystemLogResponse",
+    "CommentCreate", "CommentUpdate", "CommentResponse", "CommentWithBookingInfo", "CoachCommentStats", "StudentCommentStats"
 ]

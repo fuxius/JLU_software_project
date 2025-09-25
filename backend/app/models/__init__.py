@@ -11,6 +11,7 @@ from .competition import Competition, CompetitionGroup, CompetitionRegistration,
 from .system_log import SystemLog
 from .notification import Notification, NotificationTemplate, UserNotificationSettings
 from .license import License, LicenseActivation, LicenseUsageLog
+from .comment import Comment
 
 __all__ = [
     "User", "UserRole",
@@ -25,5 +26,6 @@ __all__ = [
     "Competition", "CompetitionGroup", "CompetitionRegistration", "CompetitionMatch",
     "SystemLog",
     "Notification", "NotificationTemplate", "UserNotificationSettings",
-    "License", "LicenseActivation", "LicenseUsageLog"
+    "License", "LicenseActivation", "LicenseUsageLog",
+    "Comment"
 ]
