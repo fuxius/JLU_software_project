@@ -16,6 +16,15 @@ class BookingService:
     """预约服务"""
     
     @staticmethod
+    def _to_utc(dt: datetime) -> datetime:
+        """将时间统一转换为UTC时区"""
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+
+    @staticmethod
     def create_booking(db: Session, booking_data: BookingCreate, current_user: User) -> Booking:
         """创建课程预约"""
         # 暂时跳过权限检查，允许所有用户预约
@@ -47,10 +56,10 @@ class BookingService:
                 detail="该时间段已有预约冲突"
             )
         
-        # 验证预约时间（不能预约过去的时间） - 统一使用UTC进行比较，避免时区混淆
+        # 统一将预约时间转换为UTC，避免时区混淆
         now_utc = datetime.now(timezone.utc)
-        start_utc = booking_data.start_time.astimezone(timezone.utc) if booking_data.start_time.tzinfo else booking_data.start_time.replace(tzinfo=timezone.utc)
-        end_utc = booking_data.end_time.astimezone(timezone.utc) if booking_data.end_time.tzinfo else booking_data.end_time.replace(tzinfo=timezone.utc)
+        start_utc = BookingService._to_utc(booking_data.start_time)
+        end_utc = BookingService._to_utc(booking_data.end_time)
         if start_utc <= now_utc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -66,7 +75,7 @@ class BookingService:
         
         # 分配球台
         table_number = booking_data.table_number or BookingService._assign_table(
-            db, booking_data.start_time, booking_data.end_time, booking_data.campus_id
+            db, start_utc, end_utc, booking_data.campus_id
         )
         
         # 计算费用
@@ -85,8 +94,8 @@ class BookingService:
             coach_id=booking_data.coach_id,
             student_id=student.id,
             campus_id=booking_data.campus_id,
-            start_time=booking_data.start_time,
-            end_time=booking_data.end_time,
+            start_time=start_utc,
+            end_time=end_utc,
             duration_hours=booking_data.duration_hours,
             table_number=table_number,
             hourly_rate=coach.hourly_rate,
@@ -106,7 +115,7 @@ class BookingService:
             action="booking_create",
             target_type="booking",
             target_id=booking.id,
-            description=f"创建预约: {booking_data.start_time.strftime('%Y-%m-%d %H:%M')}"
+            description=f"创建预约: {start_utc.strftime('%Y-%m-%d %H:%M UTC')}"
         )
         
         return booking
@@ -114,11 +123,13 @@ class BookingService:
     @staticmethod
     def _check_time_conflict(db: Session, booking_data: BookingCreate) -> bool:
         """检查时间冲突"""
+        start_time = BookingService._to_utc(booking_data.start_time)
+        end_time = BookingService._to_utc(booking_data.end_time)
         conflicts = db.query(Booking).filter(
             Booking.coach_id == booking_data.coach_id,
             Booking.status.in_([BookingStatus.PENDING.value, BookingStatus.CONFIRMED.value]),
-            Booking.start_time < booking_data.end_time,
-            Booking.end_time > booking_data.start_time
+            Booking.start_time < end_time,
+            Booking.end_time > start_time
         ).first()
         
         return conflicts is not None
@@ -127,6 +138,8 @@ class BookingService:
     def _assign_table(db: Session, start_time: datetime, end_time: datetime, campus_id: int) -> str:
         """自动分配球台"""
         # 查询该时间段已占用的球台
+        start_time = BookingService._to_utc(start_time)
+        end_time = BookingService._to_utc(end_time)
         occupied_tables = db.query(Booking.table_number).filter(
             Booking.campus_id == campus_id,
             Booking.status.in_([BookingStatus.PENDING.value, BookingStatus.CONFIRMED.value]),
@@ -215,8 +228,9 @@ class BookingService:
             )
         
         # 检查24小时规则（统一时区）
-        now_relative = datetime.now(booking.start_time.tzinfo or timezone.utc)
-        if booking.start_time - now_relative < timedelta(hours=24):
+        start_time_utc = BookingService._to_utc(booking.start_time)
+        now_utc = datetime.now(timezone.utc)
+        if start_time_utc - now_utc < timedelta(hours=24):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="距离上课时间不足24小时，无法取消"
@@ -233,7 +247,7 @@ class BookingService:
         original_status = booking.status
         booking.status = BookingStatus.CANCELLED.value
         booking.cancelled_by = current_user.id
-        booking.cancelled_at = datetime.now()
+        booking.cancelled_at = now_utc
         booking.cancellation_reason = cancellation_data.cancellation_reason
         
         # 如果已确认的预约被取消，需要退费
@@ -250,7 +264,7 @@ class BookingService:
             action="booking_cancel",
             target_type="booking",
             target_id=booking.id,
-            description=f"取消预约: {booking.start_time.strftime('%Y-%m-%d %H:%M')}"
+            description=f"取消预约: {start_time_utc.strftime('%Y-%m-%d %H:%M UTC')}"
         )
         
         return booking
