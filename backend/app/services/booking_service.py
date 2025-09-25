@@ -280,7 +280,7 @@ class BookingService:
         cancel_count = db.query(Booking).filter(
             Booking.cancelled_by == user_id,
             Booking.cancelled_at >= current_month_start,
-            Booking.status == BookingStatus.CANCELLED
+            Booking.status == BookingStatus.CANCELLED.value
         ).count()
         
         return cancel_count >= 3
