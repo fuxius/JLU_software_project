@@ -30,10 +30,8 @@ class CommentService:
             )
         
         # 检查当前用户是否有权限评价此预约
-        print(booking.student_id)
-        print(' ')
-        print(current_user.id)
-        if booking.student_id != current_user.id:
+        student = db.query(Student).filter(Student.user_id == current_user.id).first()
+        if not student or booking.student_id != student.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="没有权限评价此预约"
@@ -83,7 +81,8 @@ class CommentService:
         
         # 检查权限
         booking = db.query(Booking).filter(Booking.id == comment.booking_id).first()
-        if not booking or booking.student_id != current_user.id:
+        student = db.query(Student).filter(Student.user_id == current_user.id).first()
+        if not booking or not student or booking.student_id != student.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="没有权限修改此评论"
@@ -122,12 +121,13 @@ class CommentService:
         
         # 检查权限
         booking = db.query(Booking).filter(Booking.id == comment.booking_id).first()
-        if (current_user.role != UserRole.ADMIN and 
-            (not booking or booking.student_id != current_user.id)):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="没有权限删除此评论"
-            )
+        if current_user.role != UserRole.ADMIN:
+            student = db.query(Student).filter(Student.user_id == current_user.id).first()
+            if not booking or not student or booking.student_id != student.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="没有权限删除此评论"
+                )
         
         db.delete(comment)
         db.commit()
@@ -146,14 +146,31 @@ class CommentService:
         
         # 检查权限
         booking = db.query(Booking).filter(Booking.id == comment.booking_id).first()
-        if (current_user.role not in [UserRole.SUPER_ADMIN, UserRole.COACH] and 
-            (not booking or booking.student_id != current_user.id)):
-            # 教练只能看到自己的评论
-            if current_user.role == UserRole.COACH and booking.coach_id != current_user.id:
+        if not booking:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="关联的预约不存在"
+            )
+
+        if current_user.role == UserRole.STUDENT:
+            student = db.query(Student).filter(Student.user_id == current_user.id).first()
+            if not student or booking.student_id != student.id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="没有权限查看此评论"
                 )
+        elif current_user.role == UserRole.COACH:
+            coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
+            if not coach or booking.coach_id != coach.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="没有权限查看此评论"
+                )
+        elif current_user.role not in [UserRole.SUPER_ADMIN, UserRole.ADMIN]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="没有权限查看此评论"
+            )
         
         return comment
     
@@ -162,15 +179,16 @@ class CommentService:
                             skip: int = 0, limit: int = 100) -> List[CommentWithBookingInfo]:
         """
         根据教练ID获取评论列表
-        - 教练只能看到自己的评论
         - 管理员可以看到所有评论
         """
         # 检查权限
-        if current_user.role == UserRole.COACH and coach_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="只能查看自己的评论"
-            )
+        if current_user.role == UserRole.COACH:
+            coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
+            if not coach or coach_id != coach.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="只能查看自己的评论"
+                )
         
         # 查询教练的评论
         comments = (db.query(Comment)
@@ -212,11 +230,13 @@ class CommentService:
         - 管理员可以看到所有评论
         """
         # 检查权限
-        if current_user.role == UserRole.STUDENT and student_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="只能查看自己的评论"
-            )
+        if current_user.role == UserRole.STUDENT:
+            student = db.query(Student).filter(Student.user_id == current_user.id).first()
+            if not student or student_id != student.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="只能查看自己的评论"
+                )
         
         # 查询学员的评论
         comments = (db.query(Comment)
@@ -255,11 +275,13 @@ class CommentService:
         获取教练评价统计
         """
         # 检查权限
-        if current_user.role == UserRole.COACH and coach_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="只能查看自己的统计信息"
-            )
+        if current_user.role == UserRole.COACH:
+            coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
+            if not coach or coach_id != coach.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="只能查看自己的统计信息"
+                )
         
         # 获取教练信息
         coach = db.query(Coach).filter(Coach.id == coach_id).first()
@@ -315,11 +337,13 @@ class CommentService:
         获取学员评价统计
         """
         # 检查权限
-        if current_user.role == UserRole.STUDENT and student_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="只能查看自己的统计信息"
-            )
+        if current_user.role == UserRole.STUDENT:
+            student = db.query(Student).filter(Student.user_id == current_user.id).first()
+            if not student or student_id != student.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="只能查看自己的统计信息"
+                )
         
         # 获取学员信息
         student = db.query(Student).filter(Student.id == student_id).first()

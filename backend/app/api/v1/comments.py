@@ -4,7 +4,8 @@ from typing import List, Optional
 
 from ...db.database import get_db
 from ...core.deps import get_current_user
-from ...models.user import User
+from ...models.user import User, UserRole
+from ...models.coach import Coach
 from ...schemas.comment import (
     CommentCreate, CommentUpdate, CommentResponse, 
     CommentWithBookingInfo, CoachCommentStats, StudentCommentStats
@@ -162,7 +163,14 @@ def get_my_comments(
     if current_user.role == UserRole.STUDENT:
         comments = CommentService.get_comments_by_student(db, current_user.id, current_user, skip, limit)
     elif current_user.role == UserRole.COACH:
-        comments = CommentService.get_comments_by_coach(db, current_user.id, current_user, skip, limit)
+        # 教练用户需要先获取对应的 coach_id
+        coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
+        if not coach:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="教练信息不存在"
+            )
+        comments = CommentService.get_comments_by_coach(db, coach.id, current_user, skip, limit)
     else:
         # 管理员需要指定具体的教练或学员ID
         raise HTTPException(
@@ -186,7 +194,14 @@ def get_my_comment_stats(
     if current_user.role == UserRole.STUDENT:
         stats = CommentService.get_student_comment_stats(db, current_user.id, current_user)
     elif current_user.role == UserRole.COACH:
-        stats = CommentService.get_coach_comment_stats(db, current_user.id, current_user)
+        # 教练用户需要先获取对应的 coach_id
+        coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
+        if not coach:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="教练信息不存在"
+            )
+        stats = CommentService.get_coach_comment_stats(db, coach.id, current_user)
     else:
         # 管理员需要指定具体的教练或学员ID
         raise HTTPException(
@@ -211,6 +226,7 @@ def get_comment_by_booking(
     """
     # 检查预约是否存在
     from ...models.booking import Booking
+    from ...models.comment import Comment
     booking = db.query(Booking).filter(Booking.id == booking_id).first()
     if not booking:
         raise HTTPException(
@@ -219,13 +235,19 @@ def get_comment_by_booking(
         )
     
     # 检查权限
-    if (current_user.role == UserRole.STUDENT and booking.student_id != current_user.id) or \
-       (current_user.role == UserRole.COACH and booking.coach_id != current_user.id):
+    if current_user.role == UserRole.STUDENT and booking.student_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="没有权限查看此预约的评论"
         )
-    
+    elif current_user.role == UserRole.COACH:
+        coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
+        if not coach or booking.coach_id != coach.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="没有权限查看此预约的评论"
+            )
+
     # 查找评论
     comment = db.query(Comment).filter(Comment.booking_id == booking_id).first()
     if not comment:
