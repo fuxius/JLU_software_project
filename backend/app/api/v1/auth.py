@@ -89,10 +89,7 @@ def register_admin(
             detail="只有超级管理员可以创建管理员账户"
         )
 
-    create_data = UserCreate(
-        **user_data.dict(),
-        role=user_data.role
-    )
+    create_data = UserCreate(**user_data.dict())
 
     user = UserService.create_admin_user(db, create_data, current_user)
     return UserResponse.from_orm(user)
