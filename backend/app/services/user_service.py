@@ -188,24 +188,148 @@ class UserService:
                 detail="用户不存在"
             )
         
+        # 检查角色更新权限
+        if user_data.role is not None and user_data.role != user.role:
+            # 只有管理员可以更新用户角色
+            if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="权限不足，无法更新用户角色"
+                )
+            
+            # 校区管理员不能创建或更新为超级管理员
+            if (current_user.role == UserRole.CAMPUS_ADMIN and 
+                user_data.role == UserRole.SUPER_ADMIN):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="校区管理员不能设置用户为超级管理员"
+                )
+        
         # 更新字段
-        for field, value in user_data.dict(exclude_unset=True).items():
-            setattr(user, field, value)
+        update_data = user_data.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            if field == 'role' and value is not None:
+                # 规范化角色值
+                normalized_role = UserService._normalize_role(value)
+                setattr(user, field, normalized_role)
+            else:
+                setattr(user, field, value)
         
         db.commit()
         db.refresh(user)
         
+        # 如果更新了角色，需要创建或更新对应的扩展记录
+        if 'role' in update_data and update_data['role'] is not None:
+            UserService._handle_role_change(db, user, update_data['role'])
+        
         # 记录系统日志
+        changes = []
+        for field, value in update_data.items():
+            if field == 'role':
+                changes.append(f"角色: {value}")
+            elif field == 'real_name':
+                changes.append(f"真实姓名: {value}")
+            elif field == 'phone':
+                changes.append(f"手机号: {value}")
+            elif field == 'email':
+                changes.append(f"邮箱: {value}")
+        
         SystemLogService.log_action(
             db=db,
             user_id=current_user.id,
             action="user_update",
             target_type="user",
             target_id=user_id,
-            description=f"更新用户信息: {user.username}"
+            description=f"更新用户信息: {user.username} ({', '.join(changes)})"
         )
         
         return user
+    
+    @staticmethod
+    def _handle_role_change(db: Session, user: User, new_role: UserRole):
+        """处理角色变更时的扩展记录"""
+        from ..models.student import Student
+        from ..models.coach import Coach, CoachLevel
+        
+        old_role = user.role
+        
+        # 如果角色从教练变更为其他角色，删除教练记录
+        if old_role == UserRole.COACH and new_role != UserRole.COACH:
+            existing_coach = db.query(Coach).filter(Coach.user_id == user.id).first()
+            if existing_coach:
+                # 检查是否有关联的预约记录
+                from ..models.booking import Booking
+                active_bookings = db.query(Booking).filter(
+                    Booking.coach_id == existing_coach.id,
+                    Booking.status.in_(['pending', 'approved'])
+                ).count()
+                
+                if active_bookings > 0:
+                    raise ValueError(f"该教练还有 {active_bookings} 个待处理预约，无法删除教练身份")
+                
+                # 删除教练记录
+                db.delete(existing_coach)
+        
+        # 如果角色从学员变更为其他角色，删除学员记录
+        elif old_role == UserRole.STUDENT and new_role != UserRole.STUDENT:
+            existing_student = db.query(Student).filter(Student.user_id == user.id).first()
+            if existing_student:
+                # 检查是否有关联的预约记录
+                from ..models.booking import Booking
+                active_bookings = db.query(Booking).filter(
+                    Booking.student_id == existing_student.id,
+                    Booking.status.in_(['pending', 'approved'])
+                ).count()
+                
+                if active_bookings > 0:
+                    raise ValueError(f"该学员还有 {active_bookings} 个待处理预约，无法删除学员身份")
+                
+                # 删除学员记录
+                db.delete(existing_student)
+        
+        # 如果角色变为学员，创建学员记录（如果不存在）
+        if new_role == UserRole.STUDENT:
+            existing_student = db.query(Student).filter(Student.user_id == user.id).first()
+            if not existing_student:
+                student = Student(user_id=user.id)
+                db.add(student)
+        
+        # 处理教练角色变更
+        existing_coach = db.query(Coach).filter(Coach.user_id == user.id).first()
+        
+        # 如果角色变为教练，创建教练记录（如果不存在）
+        if new_role == UserRole.COACH:
+            if not existing_coach:
+                # 根据用户经验或默认设置确定教练级别
+                from ..models.coach import CoachLevel
+                default_level = CoachLevel.SENIOR  # 默认高级教练
+                default_rate = 200.00  # 高级教练默认费率
+                
+                coach = Coach(
+                    user_id=user.id,
+                    level=default_level,
+                    hourly_rate=default_rate,
+                    approval_status="approved",  # 管理员直接设置的教练身份，自动批准
+                    max_students=20,
+                    current_students=0
+                )
+                db.add(coach)
+        # 如果角色从教练变更为其他角色，删除教练记录
+        elif existing_coach:
+            # 检查是否有待处理的预约
+            from ..models.booking import Booking
+            active_bookings = db.query(Booking).filter(
+                Booking.coach_id == existing_coach.id,
+                Booking.status.in_(['pending', 'approved'])
+            ).count()
+            
+            if active_bookings > 0:
+                raise ValueError(f"该教练还有 {active_bookings} 个待处理预约，无法删除教练身份")
+            
+            # 删除教练记录
+            db.delete(existing_coach)
+        
+        db.commit()
     
     @staticmethod
     def change_password(db: Session, user_id: int, old_password: str, new_password: str) -> bool:

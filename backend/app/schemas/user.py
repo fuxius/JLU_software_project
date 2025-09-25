@@ -90,12 +90,29 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     """用户更新Schema"""
     real_name: Optional[str] = None
+    role: Optional[UserRole] = None
     gender: Optional[str] = None
     age: Optional[int] = None
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
     avatar_url: Optional[str] = None
     id_number: Optional[str] = None
+    
+    @validator('role', pre=True)
+    def normalize_role(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v = v.strip().lower()
+            mapping = {
+                'super_admin': UserRole.SUPER_ADMIN,
+                'campus_admin': UserRole.CAMPUS_ADMIN,
+                'coach': UserRole.COACH,
+                'student': UserRole.STUDENT,
+            }
+            if v in mapping:
+                return mapping[v]
+        return v
 
 class UserResponse(UserBase):
     """用户响应Schema"""

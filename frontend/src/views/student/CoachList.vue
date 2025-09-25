@@ -71,6 +71,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { coachApi } from '@/api/coaches'
+import { bookingApi } from '@/api/bookings'
 import { useUserStore } from '@/store/user'
 
 const router = useRouter()
@@ -185,16 +186,39 @@ const resetSearch = () => {
   // 重置后计算属性会自动更新显示所有教练
 }
 
-const selectCoach = (coach: any) => {
-  // 跳转到预约页面，并传递教练信息
-  router.push({
-    path: '/student/booking',
-    query: {
-      coachId: coach.id,
-      coachName: coach.user?.real_name || '教练',
-      hourlyRate: coach.hourly_rate
+const selectCoach = async (coach: any) => {
+  try {
+    // 先获取当前学生的所有预约，用于检查是否可以预约新教练
+    const bookingsResponse = await bookingApi.getBookings()
+    const existingBookings = Array.isArray(bookingsResponse) ? bookingsResponse : (bookingsResponse.data || [])
+    
+    // 筛选出所有未取消和未拒绝的预约
+    const validBookings = existingBookings.filter((b: any) => 
+      b.status !== 'cancelled' && b.status !== 'rejected'
+    )
+    
+    // 获取已预约的教练ID列表（去重）
+    const bookedCoachIds = [...new Set(validBookings.map((b: any) => b.coach_id))]
+    
+    // 如果当前教练不在已预约教练列表中，且已预约教练数已达到2个，则拒绝预约
+    if (!bookedCoachIds.includes(coach.id) && bookedCoachIds.length >= 2) {
+      ElMessage.error('您的预约列表中已有两个不同的教练，不能再预约新教练。请先取消其中一个教练的预约后再试。')
+      return
     }
-  })
+    
+    // 条件满足，可以跳转到预约页面
+    router.push({
+      path: '/student/booking',
+      query: {
+        coachId: coach.id,
+        coachName: coach.user?.real_name || '教练',
+        hourlyRate: coach.hourly_rate
+      }
+    })
+  } catch (error) {
+    console.error('检查预约资格失败:', error)
+    ElMessage.error('检查预约资格失败，请重试')
+  }
 }
 
 const openCoachDetail = (coach: any) => {

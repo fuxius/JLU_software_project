@@ -41,7 +41,7 @@
       
       <!-- 用户列表 -->
       <el-table 
-        :data="userList" 
+        :data="filteredUserList" 
         v-loading="loading"
         stripe
         style="width: 100%"
@@ -59,7 +59,7 @@
         <el-table-column prop="email" label="邮箱" />
         <el-table-column prop="gender" label="性别" width="80">
           <template #default="scope">
-            <span>{{ scope.row.gender === 'male' ? '男' : scope.row.gender === 'female' ? '女' : '-' }}</span>
+            <span>{{ scope.row.gender === 'male' ? '男' : (scope.row.gender === 'female' ? '女' : '-') }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="age" label="年龄" width="80" />
@@ -74,6 +74,7 @@
         <el-table-column label="操作" width="200">
           <template #default="scope">
             <el-button 
+              v-if="canEditUser(scope.row)"
               type="primary" 
               size="small" 
               @click="showEditDialog(scope.row)"
@@ -81,6 +82,7 @@
               编辑
             </el-button>
             <el-button 
+              v-if="canToggleUserStatus(scope.row)"
               :type="scope.row.is_active ? 'warning' : 'success'"
               size="small" 
               @click="toggleUserStatus(scope.row)"
@@ -88,12 +90,16 @@
               {{ scope.row.is_active ? '禁用' : '启用' }}
             </el-button>
             <el-button 
+              v-if="canResetPassword(scope.row)"
               type="info" 
               size="small" 
               @click="resetPassword(scope.row)"
             >
               重置密码
             </el-button>
+            <el-tag v-if="!canEditUser(scope.row)" type="info" size="small">
+              无权限操作
+            </el-tag>
           </template>
         </el-table-column>
       </el-table>
@@ -135,11 +141,19 @@
         
         <el-form-item label="角色" prop="role">
           <el-select v-model="userForm.role" placeholder="请选择角色">
-            <el-option label="超级管理员" value="super_admin" />
-            <el-option label="校区管理员" value="campus_admin" />
-            <el-option label="教练" value="coach" />
-            <el-option label="学员" value="student" />
+            <el-option 
+              v-for="role in availableRoles"
+              :key="role.value"
+              :label="role.label"
+              :value="role.value"
+              :disabled="!canSetRole(role.value)"
+            />
           </el-select>
+          <div v-if="isCampusAdmin" class="role-tip">
+            <el-text type="info" size="small">
+              注：校区管理员无权设置校区管理员及以上级别的角色
+            </el-text>
+          </div>
         </el-form-item>
         
         <el-form-item label="手机号" prop="phone">
@@ -175,15 +189,104 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox, FormInstance } from 'element-plus'
 import { usersApi } from '../../api/users'
+import { useUserStore } from '@/store/user'
 import type { User } from '../../types'
 
 const userFormRef = ref<FormInstance>()
 const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
+const userStore = useUserStore()
+
+// 权限控制相关的计算属性
+const currentUserRole = computed(() => userStore.userRole)
+const isSuperAdmin = computed(() => userStore.isSuperAdmin)
+const isCampusAdmin = computed(() => userStore.isCampusAdmin)
+
+// 角色权限等级定义（数字越大权限越高）
+const roleLevel = computed(() => {
+  const levels: Record<string, number> = {
+    'student': 1,
+    'coach': 2,
+    'campus_admin': 3,
+    'super_admin': 4
+  }
+  return levels
+})
+
+// 当前用户的权限等级
+const currentUserLevel = computed(() => {
+  return roleLevel.value[currentUserRole.value || ''] || 0
+})
+
+// 过滤用户列表 - 校区管理员不能看到超级管理员
+const filteredUserList = computed(() => {
+  if (isSuperAdmin.value) {
+    // 超级管理员可以看到所有用户
+    return userList.value
+  } else if (isCampusAdmin.value) {
+    // 校区管理员不能看到超级管理员
+    return userList.value.filter(user => user.role !== 'super_admin')
+  }
+  return userList.value
+})
+
+// 可选择的角色列表 - 根据当前用户权限过滤
+const availableRoles = computed(() => {
+  const allRoles = [
+    { label: '超级管理员', value: 'super_admin' },
+    { label: '校区管理员', value: 'campus_admin' },
+    { label: '教练', value: 'coach' },
+    { label: '学员', value: 'student' }
+  ]
+  
+  if (isSuperAdmin.value) {
+    // 超级管理员可以设置所有角色
+    return allRoles
+  } else if (isCampusAdmin.value) {
+    // 校区管理员不能设置校区管理员及以上级别的角色
+    return allRoles.filter(role => 
+      roleLevel.value[role.value] < roleLevel.value['campus_admin']
+    )
+  }
+  
+  return allRoles.filter(role => role.value === 'student') // 默认只能设置学员
+})
+
+// 检查是否可以编辑某个用户
+const canEditUser = (user: User) => {
+  if (isSuperAdmin.value) {
+    return true // 超级管理员可以编辑所有用户
+  } else if (isCampusAdmin.value) {
+    // 校区管理员不能编辑超级管理员
+    return user.role !== 'super_admin'
+  }
+  return false // 其他角色不能编辑用户
+};
+
+// 检查是否可以禁用/启用某个用户
+const canToggleUserStatus = (user: User) => {
+  return canEditUser(user) // 与编辑权限相同
+};
+
+// 检查是否可以重置某个用户的密码
+const canResetPassword = (user: User) => {
+  return canEditUser(user) // 与编辑权限相同
+};
+
+// 检查是否可以设置某个角色
+const canSetRole = (roleValue: string) => {
+  if (isSuperAdmin.value) {
+    return true // 超级管理员可以设置任何角色
+  } else if (isCampusAdmin.value) {
+    // 校区管理员不能设置校区管理员及以上级别的角色
+    return roleLevel.value[roleValue] < roleLevel.value['campus_admin']
+  }
+  return false
+};
 
 const searchForm = reactive({
   username: '',
@@ -266,8 +369,10 @@ const loadUserList = async () => {
       role: searchForm.role || undefined
     })
     
-    userList.value = response.items
-    pagination.total = response.total
+    // 处理可能的响应格式
+    const data = response.data || response
+    userList.value = data.items || data
+    pagination.total = data.total || userList.value.length
   } catch (error: any) {
     console.error('加载用户列表失败:', error)
     ElMessage.error(error?.response?.data?.detail || '加载用户列表失败')
@@ -291,6 +396,12 @@ const resetSearch = () => {
 }
 
 const showEditDialog = (row: User) => {
+  // 检查是否有编辑权限
+  if (!canEditUser(row)) {
+    ElMessage.warning('您没有权限编辑此用户')
+    return
+  }
+  
   Object.assign(userForm, {
     id: row.id,
     username: row.username,
@@ -348,6 +459,12 @@ const handleSave = async () => {
 }
 
 const toggleUserStatus = async (row: User) => {
+  // 检查权限
+  if (!canToggleUserStatus(row)) {
+    ElMessage.warning('您没有权限操作此用户')
+    return
+  }
+  
   const action = row.is_active ? '禁用' : '启用'
   try {
     await ElMessageBox.confirm(`确定要${action}用户 ${row.username} 吗？`, '提示', {
@@ -369,6 +486,12 @@ const toggleUserStatus = async (row: User) => {
 }
 
 const resetPassword = async (row: User) => {
+  // 检查权限
+  if (!canResetPassword(row)) {
+    ElMessage.warning('您没有权限重置此用户的密码')
+    return
+  }
+  
   try {
     await ElMessageBox.confirm(`确定要重置用户 ${row.username} 的密码吗？`, '提示', {
       confirmButtonText: '确定',
@@ -433,5 +556,11 @@ onMounted(() => {
 
 .dialog-footer {
   text-align: right;
+}
+
+.role-tip {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #909399;
 }
 </style>

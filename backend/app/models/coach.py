@@ -7,7 +7,7 @@ from ..db.database import Base
 class CoachLevel(enum.Enum):
     """教练级别枚举"""
     SENIOR = "senior"  # 高级教练 200元/小时
-    INTERMEDIATE = "intermediate"  # 中级教练 150元/小时  
+    INTERMEDIATE = "intermediate"  # 中级教练 150元/小时
     JUNIOR = "junior"  # 初级教练 80元/小时
 
 class Coach(Base):

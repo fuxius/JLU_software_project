@@ -118,7 +118,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { bookingApi } from '@/api/bookings'
+import { bookingApi, BookingResponse } from '@/api/bookings'
 import { paymentApi } from '@/api/payments'
 import { useUserStore } from '@/store/user'
 
@@ -398,21 +398,66 @@ const submitBooking = async () => {
       return
     }
 
-    submitting.value = true
+    // 获取当前用户信息
+    const userStore = useUserStore()
+    if (!userStore.user) {
+      ElMessage.error('用户信息不完整，请重新登录')
+      return
+    }
 
+    submitting.value = true
+    
     try {
-      // 获取当前用户信息
-      const userStore = useUserStore()
-      if (!userStore.user) {
-        ElMessage.error('用户信息不完整，请重新登录')
+      // 获取当前学生的所有预约，用于检查
+      const response = await bookingApi.getBookings()
+      const existingBookings: BookingResponse[] = Array.isArray(response) ? response : (response.data || [])
+      
+      // 1. 检查教练数量限制 (最多只能有两个不同的教练)
+      // 先筛选出所有未取消的预约
+      const validBookings = existingBookings.filter((b: BookingResponse) => 
+        b.status !== 'cancelled' && b.status !== 'rejected'
+      )
+      
+      // 获取已预约的教练ID列表（去重）
+      const bookedCoachIds = [...new Set(validBookings.map((b: BookingResponse) => b.coach_id))]
+      
+      // 如果当前教练不在已预约教练列表中，且已预约教练数已达到2个，则拒绝预约
+      if (!bookedCoachIds.includes(selectedCoach.value.id) && bookedCoachIds.length >= 2) {
+        ElMessage.error('您的预约列表中已有两个不同的教练，不能再预约新教练。请先取消其中一个教练的预约后再试。')
+        submitting.value = false
+        return
+      }
+      
+      // 2. 检查时间冲突 (同一时间段不能约两个教练)
+      const hasTimeConflict = validBookings.some((booking: BookingResponse) => {
+        // 排除已取消和已拒绝的预约
+        if (booking.status === 'cancelled' || booking.status === 'rejected') {
+          return false
+        }
+        
+        const bookingStart = new Date(booking.start_time).getTime()
+        const bookingEnd = new Date(booking.end_time).getTime()
+        const newStart = startTime.getTime()
+        const newEnd = endTime.getTime()
+        
+        // 检查是否有时间重叠
+        // (新开始时间在已有预约期间 或 新结束时间在已有预约期间) 或 (已有预约的开始时间在新预约期间)
+        return (newStart < bookingEnd && newStart >= bookingStart) || 
+               (newEnd > bookingStart && newEnd <= bookingEnd) || 
+               (newStart <= bookingStart && newEnd >= bookingEnd)
+      })
+      
+      if (hasTimeConflict) {
+        ElMessage.error('您在所选时间段已有其他预约，请选择其他时间段或取消冲突的预约。')
+        submitting.value = false
         return
       }
 
       // 调用预约API
       const bookingData = {
         coach_id: selectedCoach.value.id,
-        student_id: userStore.user.id, // 添加student_id
-        campus_id: userStore.user.campus_id || 1, // 如果没有campus_id，默认使用主校区
+        student_id: userStore.user.id,
+        campus_id: userStore.user.campus_id || 1,
         start_time: bookingForm.start_time,
         end_time: bookingForm.end_time,
         duration_hours: duration,

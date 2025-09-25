@@ -2,7 +2,12 @@
   <div class="student-bookings">
     <el-card>
       <template #header>
-        <span>我的预约</span>
+        <div class="header-with-info">
+          <span>我的预约</span>
+          <el-tag v-if="getDistinctCoachesCount > 0" type="info">
+            当前已预约 {{ getDistinctCoachesCount }} 个教练 (最多可预约2个不同教练)
+          </el-tag>
+        </div>
       </template>
       
       <el-table :data="bookingList" stripe>
@@ -74,11 +79,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { bookingApi } from '@/api/bookings'
 
-const bookingList = ref([])
+const bookingList = ref<any[]>([])
 
 const getStatusText = (status: string) => {
   const statusMap: Record<string, string> = {
@@ -105,8 +110,9 @@ const getStatusTagType = (status: string) => {
 const loadBookingList = async () => {
   try {
     // 调用获取预约列表API
-    const result = await bookingApi.getBookings()
-    bookingList.value = result
+    const response = await bookingApi.getBookings()
+    // 处理可能的响应格式（兼容数组或对象格式的返回值）
+    bookingList.value = Array.isArray(response) ? response : (response.data || [])
   } catch (error) {
     console.error('加载预约列表失败:', error)
     ElMessage.error('加载预约列表失败')
@@ -145,7 +151,27 @@ const cancelBooking = async (booking: any) => {
   }
 }
 
+// 计算已预约的不同教练数量
+const getDistinctCoachesCount = computed(() => {
+  // 筛选出有效预约（未取消和未拒绝）
+  const validBookings = bookingList.value.filter((booking: any) => 
+    booking.status !== 'cancelled' && booking.status !== 'rejected'
+  )
+  
+  // 获取不同教练的数量
+  const uniqueCoachIds = new Set(validBookings.map((booking: any) => booking.coach_id))
+  return uniqueCoachIds.size
+})
+
 onMounted(() => {
   loadBookingList()
 })
 </script>
+
+<style scoped>
+.header-with-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+</style>
