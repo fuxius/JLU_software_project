@@ -28,6 +28,7 @@
                 </template>
                 <el-menu-item index="/admin/campus">校区管理</el-menu-item>
                 <el-menu-item index="/admin/users">用户管理</el-menu-item>
+                <el-menu-item index="/admin/competitions">比赛管理</el-menu-item>
               </el-sub-menu>
             </template>
             
@@ -36,6 +37,10 @@
               <el-menu-item index="/admin/users">
                 <el-icon><UserFilled /></el-icon>
                 <span>用户管理</span>
+              </el-menu-item>
+              <el-menu-item index="/admin/competitions">
+                <el-icon><Trophy /></el-icon>
+                <span>比赛管理</span>
               </el-menu-item>
             </template>
             

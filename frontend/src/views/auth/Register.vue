@@ -58,6 +58,17 @@
           <el-input-number v-model="registerForm.age" :min="1" :max="120" />
         </el-form-item>
         
+        <el-form-item label="校区" prop="campusId">
+          <el-select v-model="registerForm.campusId" placeholder="请选择校区" style="width: 100%">
+            <el-option
+              v-for="campus in campusList"
+              :key="campus.id"
+              :label="`${campus.id} - ${campus.name}`"
+              :value="campus.id"
+            />
+          </el-select>
+        </el-form-item>
+        
         <el-form-item>
           <el-button type="primary" @click="handleRegister" :loading="loading">
             注册
@@ -72,14 +83,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, FormInstance } from 'element-plus'
-import { authApi } from '@/api/auth'
+import { authApi } from '../../api/auth'
+import { campusApi } from '../../api/campus'
+import type { Campus } from '../../types'
 
 const router = useRouter()
 const registerFormRef = ref<FormInstance>()
 const loading = ref(false)
+const campusList = ref<Campus[]>([])
 
 const registerForm = reactive({
   username: '',
@@ -89,7 +103,24 @@ const registerForm = reactive({
   phone: '',
   email: '',
   gender: 'male',
-  age: 18
+  age: 18,
+  campusId: undefined as number | undefined
+})
+
+// 获取校区列表
+const fetchCampuses = async () => {
+  try {
+    const response = await campusApi.getCampuses()
+    campusList.value = response.items || []
+    console.log('校区列表:', campusList.value)
+  } catch (error) {
+    console.error('获取校区列表失败:', error)
+    ElMessage.error('获取校区列表失败')
+  }
+}
+
+onMounted(() => {
+  fetchCampuses()
 })
 
 const validatePassword = (rule: any, value: any, callback: any) => {
@@ -131,6 +162,9 @@ const registerRules = {
   ],
   email: [
     { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+  ],
+  campusId: [
+    { required: true, message: '请选择校区', trigger: 'change' }
   ]
 }
 
@@ -146,10 +180,13 @@ const handleRegister = async () => {
       password: registerForm.password,
       real_name: registerForm.realName,
       phone: registerForm.phone,
-      email: registerForm.email || null,
+      email: registerForm.email || undefined,
       gender: registerForm.gender,
-      age: registerForm.age
+      age: registerForm.age,
+      campus_id: registerForm.campusId
     }
+    
+    console.log('注册数据:', registerData)
     
     // 默认注册为学员
     await authApi.registerStudent(registerData)

@@ -44,5 +44,10 @@ export const usersApi = {
   // 停用用户
   deactivateUser: (userId: number) => {
     return request.delete(`/users/${userId}`)
+  },
+
+  // 更改用户校区
+  updateUserCampus: (userId: number, campusId: number | null) => {
+    return request.patch(`/users/${userId}/campus`, { campus_id: campusId })
   }
 }

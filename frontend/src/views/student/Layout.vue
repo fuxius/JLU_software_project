@@ -8,7 +8,7 @@
         <div class="header-right">
           <el-dropdown @command="handleCommand">
             <span class="el-dropdown-link">
-              {{ userStore.userInfo?.realName || '学员' }}
+              {{ userStore.user?.real_name || '学员' }}
               <el-icon><arrow-down /></el-icon>
             </span>
             <template #dropdown>
@@ -29,6 +29,10 @@
             router
             unique-opened
           >
+            <el-menu-item index="/student/messages">
+              <el-icon><bell /></el-icon>
+              <span>消息</span>
+            </el-menu-item>
             <el-menu-item index="/student/coaches">
               <el-icon><user /></el-icon>
               <span>教练列表</span>
@@ -60,7 +64,7 @@
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown, User, Calendar, Wallet, Trophy } from '@element-plus/icons-vue'
+import { ArrowDown, User, Calendar, Wallet, Trophy, Bell } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()

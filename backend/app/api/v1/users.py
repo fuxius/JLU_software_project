@@ -158,3 +158,35 @@ def reset_user_password(
     """重置用户密码"""
     new_password = UserService.reset_user_password(db, user_id, current_user)
     return {"message": "密码重置成功", "new_password": new_password}
+
+@router.patch("/{user_id}/campus", summary="更改用户校区")
+def update_user_campus(
+    user_id: int,
+    campus_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """更改用户校区（仅超级管理员）"""
+    from ...models.user import UserRole
+    
+    # 权限检查：只有超级管理员可以修改用户校区
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只有超级管理员可以修改用户校区"
+        )
+    
+    # 获取要修改的用户
+    target_user = UserService.get_user_by_id(db, user_id)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+    
+    # 更新校区ID
+    campus_id = campus_data.get("campus_id")
+    target_user.campus_id = campus_id
+    db.commit()
+    
+    return {"message": "用户校区更新成功", "campus_id": campus_id}

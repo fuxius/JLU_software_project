@@ -71,6 +71,14 @@
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="注册时间" />
+        <el-table-column prop="campus_id" label="校区">
+          <template #default="scope">
+            <span v-if="scope.row.campus_id">
+              {{ scope.row.campus_id }}<span v-if="campusMap[scope.row.campus_id]"> - {{ campusMap[scope.row.campus_id] }}</span>
+            </span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="200">
           <template #default="scope">
             <el-button 
@@ -174,6 +182,29 @@
         <el-form-item label="年龄" prop="age">
           <el-input-number v-model="userForm.age" :min="1" :max="120" />
         </el-form-item>
+        
+        <el-form-item v-if="isSuperAdmin" label="校区" prop="campus_id">
+          <el-select v-model="userForm.campus_id" placeholder="请选择校区" style="width: 100%">
+            <el-option
+              v-for="campus in campusList"
+              :key="campus.id"
+              :label="`${campus.id} - ${campus.name}`"
+              :value="campus.id"
+            />
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item v-if="isCampusAdmin && userForm.campus_id" label="所属校区">
+          <el-input 
+            :value="userForm.campus_id && campusMap[userForm.campus_id] ? `${userForm.campus_id} - ${campusMap[userForm.campus_id]}` : '未设置'" 
+            disabled 
+          />
+          <div class="campus-tip">
+            <el-text type="info" size="small">
+              注：校区管理员无权修改用户校区信息
+            </el-text>
+          </div>
+        </el-form-item>
       </el-form>
       
       <template #footer>
@@ -192,7 +223,8 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox, FormInstance } from 'element-plus'
 import { usersApi } from '../../api/users'
-import { useUserStore } from '@/store/user'
+import { campusApi } from '../../api/campus'
+import { useUserStore } from '../../store/user'
 import type { User } from '../../types'
 
 const userFormRef = ref<FormInstance>()
@@ -205,6 +237,7 @@ const userStore = useUserStore()
 const currentUserRole = computed(() => userStore.userRole)
 const isSuperAdmin = computed(() => userStore.isSuperAdmin)
 const isCampusAdmin = computed(() => userStore.isCampusAdmin)
+const currentUserCampusId = computed(() => userStore.user?.campus_id)
 
 // 角色权限等级定义（数字越大权限越高）
 const roleLevel = computed(() => {
@@ -222,14 +255,17 @@ const currentUserLevel = computed(() => {
   return roleLevel.value[currentUserRole.value || ''] || 0
 })
 
-// 过滤用户列表 - 校区管理员不能看到超级管理员
+// 过滤用户列表 - 校区管理员只能看到本校区用户
 const filteredUserList = computed(() => {
   if (isSuperAdmin.value) {
     // 超级管理员可以看到所有用户
     return userList.value
   } else if (isCampusAdmin.value) {
-    // 校区管理员不能看到超级管理员
-    return userList.value.filter(user => user.role !== 'super_admin')
+    // 校区管理员只能看到本校区的用户，且不能看到超级管理员
+    return userList.value.filter(user => 
+      user.role !== 'super_admin' && 
+      user.campus_id === currentUserCampusId.value
+    )
   }
   return userList.value
 })
@@ -294,16 +330,7 @@ const searchForm = reactive({
   role: ''
 })
 
-const userForm = reactive<{
-  id: number | null
-  username: string
-  real_name: string
-  role: string
-  phone: string
-  email: string
-  gender: string
-  age: number
-}>({
+const userForm = reactive({
   id: null,
   username: '',
   real_name: '',
@@ -311,7 +338,9 @@ const userForm = reactive<{
   phone: '',
   email: '',
   gender: 'male',
-  age: 18
+  age: 18,
+  campus_id: undefined,
+  original_campus_id: undefined // 用于比较校区是否变化
 })
 
 const pagination = reactive({
@@ -321,6 +350,8 @@ const pagination = reactive({
 })
 
 const userList = ref<User[]>([])
+const campusList = ref<any[]>([])
+const campusMap = reactive<Record<number, string>>({})
 
 const userRules = {
   real_name: [
@@ -381,6 +412,20 @@ const loadUserList = async () => {
   }
 }
 
+const fetchCampuses = async () => {
+  try {
+    const response = await campusApi.getCampuses()
+    console.log('校区API响应:', response)
+    // 处理不同的响应格式
+    campusList.value = response.items || response.data?.items || response.data || response || []
+    campusList.value.forEach(c => {
+      campusMap[c.id] = c.name
+    })
+  } catch (error) {
+    console.error('获取校区列表失败:', error)
+  }
+}
+
 const handleSearch = () => {
   pagination.page = 1
   loadUserList()
@@ -410,7 +455,9 @@ const showEditDialog = (row: User) => {
     phone: row.phone,
     email: row.email || '',
     gender: row.gender || 'male',
-    age: row.age || 18
+    age: row.age || 18,
+    campus_id: row.campus_id || undefined,
+    original_campus_id: row.campus_id || undefined // 记录原始校区值
   })
   dialogVisible.value = true
 }
@@ -427,25 +474,35 @@ const resetForm = () => {
     phone: '',
     email: '',
     gender: 'male',
-    age: 18
+    age: 18,
+    campus_id: undefined,
+    original_campus_id: undefined
   })
 }
 
 const handleSave = async () => {
   if (!userFormRef.value || !userForm.id) return
-  
   try {
     await userFormRef.value.validate()
     saving.value = true
     
-    await usersApi.updateUser(userForm.id, {
+    // 准备基本用户信息更新数据（不包含 campus_id）
+    const updateData: any = {
       real_name: userForm.real_name,
       role: userForm.role,
       phone: userForm.phone,
       email: userForm.email,
       gender: userForm.gender,
       age: userForm.age
-    })
+    }
+    
+    // 更新基本用户信息
+    await usersApi.updateUser(userForm.id, updateData)
+    
+    // 检查校区是否变化，如果是超级管理员且校区发生变化，则单独调用校区更新接口
+    if (isSuperAdmin.value && userForm.campus_id !== userForm.original_campus_id) {
+      await usersApi.updateUserCampus(userForm.id, userForm.campus_id || null)
+    }
     
     ElMessage.success('更新成功')
     dialogVisible.value = false
@@ -530,6 +587,7 @@ const handleCurrentChange = (page: number) => {
 }
 
 onMounted(() => {
+  fetchCampuses()
   loadUserList()
 })
 </script>
@@ -559,6 +617,12 @@ onMounted(() => {
 }
 
 .role-tip {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.campus-tip {
   margin-top: 5px;
   font-size: 12px;
   color: #909399;

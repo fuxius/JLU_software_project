@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
 
 from ...db.database import get_db
-from ...models.user import User
-from ...core.deps import get_current_user
+from ...models.user import User, UserRole
+from ...core.deps import get_current_user, get_admin
 from ...services.competition_service import CompetitionService
 from ...schemas.competition import (
     CompetitionCreate, CompetitionUpdate, CompetitionResponse, CompetitionQuery,
@@ -22,17 +22,16 @@ router = APIRouter()
 @router.post("/", response_model=CompetitionResponse, summary="创建比赛")
 def create_competition(
     competition_data: CompetitionCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     创建比赛
     
-    - 只有管理员可以创建比赛
+    - 前端控制权限
     - 自动设置比赛状态为即将开始
     - 验证日期有效性
     """
-    competition = CompetitionService.create_competition(db, competition_data, current_user)
+    competition = CompetitionService.create_competition(db, competition_data)
     return CompetitionResponse.from_orm(competition)
 
 
@@ -50,7 +49,9 @@ def get_competitions(
     - 支持按状态、校区筛选
     - 支持分页
     - 返回报名人数统计
+    - 所有用户都可以查看比赛列表
     """
+    
     query = CompetitionQuery(
         status=status,
         campus_id=campus_id,
@@ -104,7 +105,7 @@ def update_competition(
     competition_id: int,
     competition_data: CompetitionUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_admin)
 ):
     """
     更新比赛信息
@@ -154,8 +155,8 @@ def get_registrations(
     """
     registrations = CompetitionService.get_registrations(db, competition_id, group_type)
     
-    # 权限控制
-    if current_user.role.value != "admin":
+    # 权限控制：只有管理员可以查看所有报名，学员只能查看自己的
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
         # 获取当前用户的student记录
         from ...models.student import Student
         student = db.query(Student).filter(Student.user_id == current_user.id).first()
@@ -175,7 +176,7 @@ def generate_draw(
     competition_id: int,
     group_type: str = Query(..., pattern="^[ABC]$", description="组别"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_admin)
 ):
     """
     生成比赛对阵
@@ -209,7 +210,7 @@ def update_match_result(
     match_id: int,
     match_data: CompetitionMatchUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_admin)
 ):
     """
     录入比赛结果

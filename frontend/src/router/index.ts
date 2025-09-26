@@ -65,6 +65,16 @@ const routes: RouteRecordRaw[] = [
           requiresAuth: true,
           roles: ['super_admin', 'campus_admin']
         }
+      },
+      {
+        path: 'competitions',
+        name: 'CompetitionManagement',
+        component: () => import('@/views/admin/CompetitionManagement.vue'),
+        meta: { 
+          title: '比赛管理',
+          requiresAuth: true,
+          roles: ['super_admin', 'campus_admin']
+        }
       }
     ]
   },
@@ -79,6 +89,16 @@ const routes: RouteRecordRaw[] = [
       roles: ['student']
     },
     children: [
+      {
+        path: 'messages',
+        name: 'StudentMessages',
+        component: () => import('@/views/student/Messages.vue'),
+        meta: { 
+          title: '消息中心',
+          requiresAuth: true,
+          roles: ['student']
+        }
+      },
       {
         path: 'coaches',
         name: 'CoachList',

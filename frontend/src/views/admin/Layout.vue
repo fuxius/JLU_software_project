@@ -8,7 +8,7 @@
         <div class="header-right">
           <el-dropdown @command="handleCommand">
             <span class="el-dropdown-link">
-              {{ userStore.userInfo?.realName || '管理员' }}
+              {{ userStore.user?.real_name || '管理员' }}
               <el-icon><arrow-down /></el-icon>
             </span>
             <template #dropdown>
@@ -29,13 +29,24 @@
             router
             unique-opened
           >
-            <el-menu-item index="/admin/campus">
+            <!-- 超级管理员专用菜单 -->
+            <el-menu-item 
+              v-if="userStore.user?.role === 'super_admin'"
+              index="/admin/campus"
+            >
               <el-icon><office-building /></el-icon>
               <span>校区管理</span>
             </el-menu-item>
+            
+            <!-- 超级管理员和校区管理员共用菜单 -->
             <el-menu-item index="/admin/users">
               <el-icon><user /></el-icon>
               <span>用户管理</span>
+            </el-menu-item>
+            
+            <el-menu-item index="/admin/competitions">
+              <el-icon><trophy /></el-icon>
+              <span>比赛管理</span>
             </el-menu-item>
           </el-menu>
         </el-aside>
@@ -52,7 +63,7 @@
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown, OfficeBuilding, User } from '@element-plus/icons-vue'
+import { ArrowDown, OfficeBuilding, User, Trophy } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()

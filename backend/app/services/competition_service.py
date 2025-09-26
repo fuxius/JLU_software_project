@@ -26,13 +26,8 @@ class CompetitionService:
     """比赛管理服务"""
     
     @staticmethod
-    def create_competition(db: Session, competition_data: CompetitionCreate, current_user: User) -> Competition:
+    def create_competition(db: Session, competition_data: CompetitionCreate) -> Competition:
         """创建比赛"""
-        if current_user.role != UserRole.ADMIN:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="只有管理员可以创建比赛"
-            )
         
         # 验证日期
         if competition_data.registration_deadline >= competition_data.competition_date:
@@ -47,14 +42,6 @@ class CompetitionService:
         db.refresh(competition)
         
         # 记录日志
-        SystemLogService.log_action(
-            db=db,
-            user_id=current_user.id,
-            action="create_competition",
-            resource_type="competition",
-            resource_id=competition.id,
-            details=f"创建比赛: {competition.title}"
-        )
         
         return competition
     
@@ -83,7 +70,8 @@ class CompetitionService:
                 CompetitionRegistration.is_confirmed == True
             ).count()
             competition.registered_count = registered_count
-        
+            
+        print(competitions)
         return competitions
     
     @staticmethod
@@ -108,13 +96,21 @@ class CompetitionService:
     @staticmethod
     def update_competition(db: Session, competition_id: int, competition_data: CompetitionUpdate, current_user: User) -> Competition:
         """更新比赛信息"""
-        if current_user.role != UserRole.ADMIN:
+        if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="只有管理员可以更新比赛"
             )
         
         competition = CompetitionService.get_competition(db, competition_id)
+        
+        # 校区管理员只能更新自己校区的比赛
+        if current_user.role == UserRole.CAMPUS_ADMIN:
+            if competition.campus_id != current_user.campus_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="校区管理员只能管理自己校区的比赛"
+                )
         
         # 如果比赛已开始，限制可修改的字段
         if competition.status in [CompetitionStatus.IN_PROGRESS.value, CompetitionStatus.COMPLETED.value]:
@@ -132,14 +128,6 @@ class CompetitionService:
         db.refresh(competition)
         
         # 记录日志
-        SystemLogService.log_action(
-            db=db,
-            user_id=current_user.id,
-            action="update_competition",
-            resource_type="competition",
-            resource_id=competition.id,
-            details=f"更新比赛: {competition.title}"
-        )
         
         return competition
     
@@ -259,7 +247,7 @@ class CompetitionService:
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="只能确认自己的报名"
                 )
-        elif current_user.role != UserRole.ADMIN:
+        elif current_user.role not in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="权限不足"
@@ -294,13 +282,21 @@ class CompetitionService:
     @staticmethod
     def generate_draw(db: Session, draw_request: DrawRequest, current_user: User) -> List[CompetitionMatch]:
         """生成比赛对阵"""
-        if current_user.role != UserRole.ADMIN:
+        if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="只有管理员可以生成对阵"
             )
         
         competition = CompetitionService.get_competition(db, draw_request.competition_id)
+        
+        # 校区管理员只能管理自己校区的比赛
+        if current_user.role == UserRole.CAMPUS_ADMIN:
+            if competition.campus_id != current_user.campus_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="校区管理员只能管理自己校区的比赛"
+                )
         
         # 检查比赛状态
         if competition.status not in [CompetitionStatus.REGISTRATION.value, CompetitionStatus.DRAW_COMPLETE.value]:
@@ -369,8 +365,8 @@ class CompetitionService:
             db=db,
             user_id=current_user.id,
             action="generate_draw",
-            resource_type="competition",
-            resource_id=competition.id,
+            target_type="competition",
+            target_id=competition.id,
             details=f"生成对阵: {competition.title} {draw_request.group_type}组"
         )
         
@@ -379,7 +375,7 @@ class CompetitionService:
     @staticmethod
     def update_match_result(db: Session, match_id: int, match_data: CompetitionMatchUpdate, current_user: User) -> CompetitionMatch:
         """更新比赛结果"""
-        if current_user.role != UserRole.ADMIN:
+        if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.CAMPUS_ADMIN]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="只有管理员可以录入比赛结果"
@@ -391,6 +387,15 @@ class CompetitionService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="比赛对阵不存在"
             )
+        
+        # 校区管理员只能管理自己校区的比赛
+        if current_user.role == UserRole.CAMPUS_ADMIN:
+            competition = db.query(Competition).filter(Competition.id == match.competition_id).first()
+            if competition and competition.campus_id != current_user.campus_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="校区管理员只能管理自己校区的比赛"
+                )
         
         # 更新比赛结果
         for field, value in match_data.model_dump(exclude_unset=True).items():
@@ -415,8 +420,8 @@ class CompetitionService:
             db=db,
             user_id=current_user.id,
             action="update_match_result",
-            resource_type="competition_match",
-            resource_id=match.id,
+            target_type="competition_match",
+            target_id=match.id,
             details=f"录入比赛结果: {match_data.player1_score}:{match_data.player2_score}"
         )
         
