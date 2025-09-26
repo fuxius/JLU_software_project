@@ -90,6 +90,33 @@ def confirm_booking(
     )
     return BookingResponse.from_orm(booking)
 
+@router.get("/my/completed", response_model=List[BookingResponse], summary="获取已完成的预约")
+def get_completed_bookings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    skip: int = Query(0, ge=0, description="跳过记录数"),
+    limit: int = Query(100, ge=1, le=1000, description="返回记录数")
+):
+    """
+    获取已完成的预约
+    - 返回已完成但尚未评价的预约
+    - 学员可以查看自己的
+    - 教练可以查看自己的
+    """
+    bookings = BookingService.get_completed_bookings(db, current_user, skip, limit)
+    # 构造包含教练和学员姓名的响应
+    result = []
+    for booking in bookings:
+        booking_data = BookingResponse.from_orm(booking)
+        # 添加教练姓名
+        if booking.coach and booking.coach.user:
+            booking_data.coach_name = booking.coach.user.real_name
+        # 添加学员姓名
+        if booking.student and booking.student.user:
+            booking_data.student_name = booking.student.user.real_name
+        result.append(booking_data)
+    return result
+
 @router.post("/{booking_id}/cancel", response_model=BookingResponse, summary="取消预约")
 def cancel_booking(
     booking_id: int,

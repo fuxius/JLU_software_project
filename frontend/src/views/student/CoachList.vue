@@ -47,15 +47,83 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="detailVisible" title="教练详情" width="520px">
-      <div v-if="currentCoach">
-        <p>姓名：{{ currentCoach.user?.real_name || '-' }}</p>
-        <p>级别：{{ getLevelText(currentCoach.level) }}</p>
-        <p>收费：{{ currentCoach.hourly_rate }} 元/小时</p>
-        <p>性别：{{ (currentCoach.user?.gender || 'male') === 'male' ? '男' : '女' }}</p>
-        <p>年龄：{{ currentCoach.user?.age ?? '-' }}</p>
-        <p>简介：{{ currentCoach.achievements || '暂无' }}</p>
+    <el-dialog v-model="detailVisible" title="教练详情" width="720px">
+      <div v-if="currentCoach" class="coach-detail-content">
+        <!-- 基本信息 -->
+        <div class="detail-section">
+          <h3>基本信息</h3>
+          <p>姓名：{{ currentCoach.user?.real_name || '-' }}</p>
+          <p>级别：{{ getLevelText(currentCoach.level) }}</p>
+          <p>收费：{{ currentCoach.hourly_rate }} 元/小时</p>
+          <p>性别：{{ (currentCoach.user?.gender || 'male') === 'male' ? '男' : '女' }}</p>
+          <p>年龄：{{ currentCoach.user?.age ?? '-' }}</p>
+          <p>简介：{{ currentCoach.achievements || '暂无' }}</p>
+        </div>
+        
+        <!-- 评分统计 -->
+        <div v-if="coachStats" class="detail-section">
+          <h3>评分统计</h3>
+          <div class="rating-stats">
+            <div class="average-rating">
+              <span class="rating-number">{{ coachStats.average_rating.toFixed(1) }}</span>
+              <el-rate
+                :model-value="coachStats.average_rating"
+                disabled
+                show-score
+                :max="5"
+                :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+              />
+              <span class="total-comments">({{ coachStats.total_comments }}条评价)</span>
+            </div>
+            <div class="rating-distribution">
+              <div v-for="i in 5" :key="i" class="rating-bar">
+                <span class="rating-label">{{ i }}星</span>
+                <el-progress
+                  :percentage="((coachStats.rating_distribution[i] || 0) / coachStats.total_comments * 100) || 0"
+                  :format="(p: number) => coachStats.rating_distribution[i] || 0 + '条'"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 最近评价 -->
+        <div v-if="coachStats?.recent_comments?.length" class="detail-section">
+          <h3>最近评价</h3>
+          <el-timeline>
+            <el-timeline-item
+              v-for="comment in coachStats.recent_comments"
+              :key="comment.id"
+              :timestamp="formatDate(comment.created_at)"
+              placement="top"
+            >
+              <div class="comment-item">
+                <el-rate
+                  :model-value="comment.rating"
+                  disabled
+                  :max="5"
+                  :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+                />
+                <div class="comment-content">
+                  {{ comment.content || '未留下评价内容' }}
+                </div>
+                <div class="comment-info">
+                  <span>{{ formatDate(comment.booking_start_time) }}</span>
+                </div>
+              </div>
+            </el-timeline-item>
+          </el-timeline>
+        </div>
+        
+        <div v-else-if="coachStats" class="detail-section">
+          <el-empty description="暂无评价" />
+        </div>
+
+        <div v-if="loading" class="loading-section">
+          <el-skeleton :rows="3" animated />
+        </div>
       </div>
+      
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="detailVisible = false">关闭</el-button>
@@ -72,7 +140,9 @@ import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { coachApi } from '@/api/coaches'
 import { bookingApi } from '@/api/bookings'
+import { commentApi } from '@/api/comments'
 import { useUserStore } from '@/store/user'
+import type { CoachCommentStats } from '@/api/comments'
 
 const router = useRouter()
 
@@ -84,6 +154,21 @@ const searchForm = reactive({
 const allCoaches = ref<any[]>([])  // 存储所有教练数据
 const detailVisible = ref(false)
 const currentCoach = ref<any | null>(null)
+const coachStats = ref<CoachCommentStats | null>(null)
+const loading = ref(false)
+
+// 格式化日期
+const formatDate = (dateString: string | undefined) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
 
 // 计算属性：根据搜索条件过滤教练列表
 const coachList = computed(() => {
@@ -221,9 +306,22 @@ const selectCoach = async (coach: any) => {
   }
 }
 
-const openCoachDetail = (coach: any) => {
+const openCoachDetail = async (coach: any) => {
   currentCoach.value = coach
   detailVisible.value = true
+  coachStats.value = null
+  loading.value = true
+
+  try {
+    // 获取教练评价统计
+    const response = await commentApi.getCoachCommentStats(coach.id)
+    coachStats.value = response.data || response
+  } catch (error) {
+    console.error('获取教练评价统计失败:', error)
+    ElMessage.error('获取教练评价统计失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(() => {
@@ -261,5 +359,84 @@ onMounted(() => {
 
 .coach-actions {
   text-align: center;
+}
+
+/* 教练详情样式 */
+.coach-detail-content {
+  padding: 0 20px;
+}
+
+.detail-section {
+  margin-bottom: 30px;
+}
+
+.detail-section h3 {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.rating-stats {
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.average-rating {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.rating-number {
+  font-size: 36px;
+  font-weight: bold;
+  color: #f7ba2a;
+  margin-right: 10px;
+}
+
+.total-comments {
+  color: #909399;
+  margin-left: 10px;
+}
+
+.rating-distribution {
+  margin-top: 20px;
+}
+
+.rating-bar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.rating-label {
+  width: 50px;
+  margin-right: 10px;
+  text-align: right;
+}
+
+.rating-bar .el-progress {
+  flex: 1;
+}
+
+.comment-item {
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.comment-content {
+  margin: 10px 0;
+  color: #333;
+}
+
+.comment-info {
+  color: #909399;
+  font-size: 0.9em;
+}
+
+.loading-section {
+  padding: 20px;
 }
 </style>

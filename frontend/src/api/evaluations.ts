@@ -1,8 +1,16 @@
 import request from '@/utils/request'
+import type { 
+  CommentCreate, 
+  CommentUpdate, 
+  CommentResponse, 
+  CommentWithBookingInfo, 
+  CoachCommentStats, 
+  StudentCommentStats 
+} from './comments'
 
-// 评价相关类型定义
+// 从评论接口类型映射到评价接口类型
 export interface EvaluationCreate {
-  course_id: number
+  course_id: number  // 实际是 booking_id
   content: string
   rating?: number
 }
@@ -12,33 +20,24 @@ export interface EvaluationUpdate {
   rating?: number
 }
 
-export interface EvaluationResponse {
-  id: number
-  course_id: number
-  evaluator_id: number
-  evaluator_type: string
-  content: string
-  rating?: number
-  created_at: string
-  updated_at?: string
-}
+export type EvaluationResponse = CommentWithBookingInfo
 
 export interface EvaluationQuery {
-  course_id?: number
+  course_id?: number  // 映射 booking_id
   evaluator_type?: string
   skip?: number
   limit?: number
 }
 
 export interface EvaluationSummary {
-  total_evaluations: number
+  total_comments: number
   average_rating: number
   rating_distribution: Record<string, number>
-  recent_evaluations: number
+  recent_comments: any[]
 }
 
 export interface PendingEvaluationCourse {
-  course_id: number
+  course_id: number  // 映射 booking_id
   booking_id: number
   completed_at?: string
   booking: {
@@ -49,48 +48,59 @@ export interface PendingEvaluationCourse {
   }
 }
 
-// 评价相关API
+// 评价相关API（使用 comments API）
 export const evaluationApi = {
   // 创建评价
   createEvaluation: (data: EvaluationCreate) => {
-    return request.post<EvaluationResponse>('/evaluations/', data)
+    const commentData: CommentCreate = {
+      booking_id: data.course_id,
+      rating: data.rating || 5,
+      content: data.content
+    }
+    return request.post<CommentResponse>('/comments/', commentData)
   },
 
   // 获取评价列表
-  getEvaluations: (params?: EvaluationQuery) => {
-    return request.get<EvaluationResponse[]>('/evaluations/', { params })
+  getEvaluations: async (params?: EvaluationQuery) => {
+    // 转换参数
+    const apiParams = {
+      skip: params?.skip,
+      limit: params?.limit,
+      booking_id: params?.course_id
+    }
+    const response = await request.get<CommentWithBookingInfo[]>('/comments/my/comments', { params: apiParams })
+    return response
   },
 
   // 获取评价详情
   getEvaluation: (id: number) => {
-    return request.get<EvaluationResponse>(`/evaluations/${id}/`)
+    return request.get<CommentResponse>(`/comments/${id}`)
   },
 
   // 更新评价
   updateEvaluation: (id: number, data: EvaluationUpdate) => {
-    return request.put<EvaluationResponse>(`/evaluations/${id}/`, data)
+    return request.put<CommentResponse>(`/comments/${id}`, data)
   },
 
   // 删除评价
   deleteEvaluation: (id: number) => {
-    return request.delete(`/evaluations/${id}/`)
+    return request.delete(`/comments/${id}`)
   },
 
   // 获取课程的所有评价
   getCourseEvaluations: (courseId: number) => {
-    return request.get<EvaluationResponse[]>(`/evaluations/course/${courseId}/`)
+    return request.get<CommentResponse>(`/comments/booking/${courseId}`)
   },
 
   // 获取我的待评价课程
   getMyPendingEvaluations: () => {
-    return request.get<PendingEvaluationCourse[]>('/evaluations/pending/my/')
+    return request.get<any[]>('/bookings/my/completed')  // 我们需要获取已完成但未评价的预约
   },
 
   // 获取评价统计
-  getEvaluationStatistics: (userId?: number) => {
-    return request.get<EvaluationSummary>('/evaluations/statistics/summary/', {
-      params: userId ? { user_id: userId } : undefined
-    })
+  getEvaluationStatistics: async () => {
+    const stats = await request.get<CoachCommentStats>('/comments/my/stats')
+    return stats as unknown as EvaluationSummary
   },
 
   // 获取教练评价汇总

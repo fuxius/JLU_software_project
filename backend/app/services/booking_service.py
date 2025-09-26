@@ -8,6 +8,7 @@ from ..models.booking import Booking, BookingStatus
 from ..models.user import User, UserRole
 from ..models.coach import Coach
 from ..models.student import Student
+from ..models.comment import Comment
 from ..schemas.booking import BookingCreate, BookingUpdate, BookingCancellation
 from ..services.system_log_service import SystemLogService
 # PaymentService 将在方法中按需导入以避免循环导入
@@ -379,3 +380,33 @@ class BookingService:
                 available_tables.append(table_num)
         
         return available_tables
+    
+    @staticmethod
+    def get_completed_bookings(db: Session, current_user: User, skip: int = 0, limit: int = 100) -> List[Booking]:
+        """获取已完成但尚未评价的预约"""
+        # 基础查询，获取所有已完成的预约
+        query = (
+            db.query(Booking)
+            .filter(Booking.status == BookingStatus.COMPLETED.value)
+            .outerjoin(Comment, Comment.booking_id == Booking.id)
+            .filter(Comment.id.is_(None))  # 没有关联的评论
+            .order_by(Booking.end_time.desc())
+        )
+        
+        # 根据用户角色筛选预约
+        if current_user.role == UserRole.STUDENT:
+            # 学员：只能看到自己的预约
+            student = db.query(Student).filter(Student.user_id == current_user.id).first()
+            if student:
+                query = query.filter(Booking.student_id == student.id)
+            else:
+                return []
+        elif current_user.role == UserRole.COACH:
+            # 教练：只能看到自己的预约
+            coach = db.query(Coach).filter(Coach.user_id == current_user.id).first()
+            if coach:
+                query = query.filter(Booking.coach_id == coach.id)
+            else:
+                return []
+        
+        return query.offset(skip).limit(limit).all()
